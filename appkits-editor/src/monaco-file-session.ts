@@ -74,5 +74,5 @@ function normalizeModelPath(path: string, name: string): string {
   const trimmed = path.trim();
   if (trimmed.startsWith("/")) return trimmed;
   const fallbackName = name.trim() || "untitled.txt";
-  return `/w3kits/${fallbackName.replace(/^\/+/, "")}`;
+  return `/appkits/${fallbackName.replace(/^\/+/, "")}`;
 }

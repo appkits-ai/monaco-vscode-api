@@ -1,21 +1,21 @@
 import {
-  W3KITS_BRIDGE_VERSION,
-  W3KITS_FILE_READ,
-  W3KITS_FILE_WRITE,
-  W3KITS_RESPONSE,
-  W3KITS_WINDOW_TITLE,
-  type W3KitsBridgeResponse,
-  type W3KitsReadFileResult,
-  type W3KitsWriteFileResult,
+  APPKITS_BRIDGE_VERSION,
+  APPKITS_FILE_READ,
+  APPKITS_FILE_WRITE,
+  APPKITS_RESPONSE,
+  APPKITS_WINDOW_TITLE,
+  type AppKitsBridgeResponse,
+  type AppKitsReadFileResult,
+  type AppKitsWriteFileResult,
 } from "./types";
 import { base64ToText, textToBase64 } from "./base64";
 
-export class W3KitsBridgeError extends Error {
+export class AppKitsBridgeError extends Error {
   readonly code: string;
 
   constructor(code: string, message: string) {
     super(message);
-    this.name = "W3KitsBridgeError";
+    this.name = "AppKitsBridgeError";
     this.code = code;
   }
 }
@@ -26,12 +26,12 @@ type PendingRequest = {
   timeoutId: number;
 };
 
-export interface W3KitsBridgeOptions {
+export interface AppKitsBridgeOptions {
   requestTimeoutMs?: number;
   requestIdPrefix?: string;
 }
 
-export class W3KitsBridge {
+export class AppKitsBridge {
   private readonly pending = new Map<string, PendingRequest>();
   private readonly requestTimeoutMs: number;
   private readonly requestIdPrefix: string;
@@ -39,10 +39,10 @@ export class W3KitsBridge {
 
   constructor(
     private readonly hostWindow: Window = window,
-    options: W3KitsBridgeOptions = {},
+    options: AppKitsBridgeOptions = {},
   ) {
     this.requestTimeoutMs = options.requestTimeoutMs ?? 15000;
-    this.requestIdPrefix = options.requestIdPrefix ?? "w3kits_editor";
+    this.requestIdPrefix = options.requestIdPrefix ?? "appkits_editor";
     this.hostWindow.addEventListener("message", this.handleMessage);
   }
 
@@ -51,7 +51,7 @@ export class W3KitsBridge {
     for (const [requestId, pending] of this.pending) {
       this.hostWindow.clearTimeout(pending.timeoutId);
       pending.reject(
-        new W3KitsBridgeError(
+        new AppKitsBridgeError(
           "bridge_disposed",
           `Bridge disposed before ${requestId} completed.`,
         ),
@@ -66,16 +66,16 @@ export class W3KitsBridge {
 
   postWindowTitle(title: string): void {
     this.postToParent({
-      type: W3KITS_WINDOW_TITLE,
-      version: W3KITS_BRIDGE_VERSION,
+      type: APPKITS_WINDOW_TITLE,
+      version: APPKITS_BRIDGE_VERSION,
       title,
     });
   }
 
-  async readFile(path: string): Promise<W3KitsReadFileResult> {
+  async readFile(path: string): Promise<AppKitsReadFileResult> {
     const data = await this.request({
-      type: W3KITS_FILE_READ,
-      version: W3KITS_BRIDGE_VERSION,
+      type: APPKITS_FILE_READ,
+      version: APPKITS_BRIDGE_VERSION,
       path,
     });
     return parseReadFileResult(data);
@@ -85,10 +85,10 @@ export class W3KitsBridge {
     path: string;
     body: string;
     contentType: string;
-  }): Promise<W3KitsWriteFileResult> {
+  }): Promise<AppKitsWriteFileResult> {
     const data = await this.request({
-      type: W3KITS_FILE_WRITE,
-      version: W3KITS_BRIDGE_VERSION,
+      type: APPKITS_FILE_WRITE,
+      version: APPKITS_BRIDGE_VERSION,
       path: input.path,
       body: input.body,
       bodyBase64: textToBase64(input.body),
@@ -104,7 +104,7 @@ export class W3KitsBridge {
       const timeoutId = this.hostWindow.setTimeout(() => {
         this.pending.delete(requestId);
         reject(
-          new W3KitsBridgeError(
+          new AppKitsBridgeError(
             "bridge_timeout",
             `Timed out waiting for ${String(message.type)} response.`,
           ),
@@ -127,9 +127,9 @@ export class W3KitsBridge {
       return;
     }
     pending.reject(
-      new W3KitsBridgeError(
+      new AppKitsBridgeError(
         response.error?.code || "bridge_error",
-        response.error?.message || "W3Kits bridge request failed.",
+        response.error?.message || "AppKits bridge request failed.",
       ),
     );
   };
@@ -139,27 +139,27 @@ export class W3KitsBridge {
   }
 }
 
-function parseBridgeResponse(value: unknown): W3KitsBridgeResponse | null {
+function parseBridgeResponse(value: unknown): AppKitsBridgeResponse | null {
   if (!value || typeof value !== "object") return null;
-  const candidate = value as Partial<W3KitsBridgeResponse>;
+  const candidate = value as Partial<AppKitsBridgeResponse>;
   if (
-    candidate.type !== W3KITS_RESPONSE ||
-    candidate.version !== W3KITS_BRIDGE_VERSION ||
+    candidate.type !== APPKITS_RESPONSE ||
+    candidate.version !== APPKITS_BRIDGE_VERSION ||
     typeof candidate.requestId !== "string" ||
     typeof candidate.ok !== "boolean"
   ) {
     return null;
   }
-  return candidate as W3KitsBridgeResponse;
+  return candidate as AppKitsBridgeResponse;
 }
 
-function parseReadFileResult(value: unknown): W3KitsReadFileResult {
+function parseReadFileResult(value: unknown): AppKitsReadFileResult {
   if (!value || typeof value !== "object") {
-    throw new W3KitsBridgeError("invalid_file_response", "Missing file data.");
+    throw new AppKitsBridgeError("invalid_file_response", "Missing file data.");
   }
-  const data = value as Partial<W3KitsReadFileResult>;
+  const data = value as Partial<AppKitsReadFileResult>;
   if (typeof data.path !== "string") {
-    throw new W3KitsBridgeError("invalid_file_response", "Missing file path.");
+    throw new AppKitsBridgeError("invalid_file_response", "Missing file path.");
   }
   const body =
     typeof data.body === "string"
@@ -184,10 +184,10 @@ function parseWriteFileResult(
   value: unknown,
   fallbackPath: string,
   fallbackContentType: string,
-): W3KitsWriteFileResult {
+): AppKitsWriteFileResult {
   const data =
     value && typeof value === "object"
-      ? (value as Partial<W3KitsWriteFileResult>)
+      ? (value as Partial<AppKitsWriteFileResult>)
       : {};
   return {
     path: typeof data.path === "string" ? data.path : fallbackPath,

@@ -1,11 +1,11 @@
-import type { W3KitsOpenFile } from "./types";
-import { W3KITS_LAUNCH_PARAMS, W3KITS_OPEN_FILE } from "./types";
+import type { AppKitsOpenFile } from "./types";
+import { APPKITS_LAUNCH_PARAMS, APPKITS_OPEN_FILE } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object");
 }
 
-export function normalizeOpenFile(value: unknown): W3KitsOpenFile | null {
+export function normalizeOpenFile(value: unknown): AppKitsOpenFile | null {
   if (!isRecord(value)) return null;
   if (
     value.scope !== "desktop-file" ||
@@ -32,19 +32,19 @@ export function normalizeOpenFile(value: unknown): W3KitsOpenFile | null {
 
 export function openFileFromLaunchParams(
   params: unknown,
-): W3KitsOpenFile | null {
+): AppKitsOpenFile | null {
   if (!isRecord(params)) return null;
-  return normalizeOpenFile(params.w3kitsOpenFile);
+  return normalizeOpenFile(params.appkitsOpenFile);
 }
 
 export function openFileFromHostMessage(
   message: unknown,
-): W3KitsOpenFile | null {
+): AppKitsOpenFile | null {
   if (!isRecord(message)) return null;
-  if (message.type === W3KITS_OPEN_FILE) {
+  if (message.type === APPKITS_OPEN_FILE) {
     return normalizeOpenFile(message.file);
   }
-  if (message.type === W3KITS_LAUNCH_PARAMS) {
+  if (message.type === APPKITS_LAUNCH_PARAMS) {
     return openFileFromLaunchParams(message.params);
   }
   return null;

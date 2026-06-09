@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { W3KitsBridge } from "../w3kits-bridge";
+import { AppKitsBridge } from "../appkits-bridge";
 
-describe("W3KitsBridge", () => {
+describe("AppKitsBridge", () => {
   it("reads and writes through request/response postMessage", async () => {
     vi.useFakeTimers();
     const posted: unknown[] = [];
-    const bridge = new W3KitsBridge(window, {
+    const bridge = new AppKitsBridge(window, {
       requestIdPrefix: "test",
       requestTimeoutMs: 5000,
     });
@@ -15,11 +15,11 @@ describe("W3KitsBridge", () => {
 
     const readPromise = bridge.readFile("/home/agent/workspace/main.ts");
     const readRequest = posted.at(-1) as { requestId: string; type: string };
-    expect(readRequest.type).toBe("W3KITS_FILE_READ");
+    expect(readRequest.type).toBe("APPKITS_FILE_READ");
     window.dispatchEvent(
       new MessageEvent("message", {
         data: {
-          type: "W3KITS_RESPONSE",
+          type: "APPKITS_RESPONSE",
           version: 1,
           requestId: readRequest.requestId,
           ok: true,
@@ -36,7 +36,7 @@ describe("W3KitsBridge", () => {
 
     const writePromise = bridge.writeFile({
       path: "/home/agent/workspace/main.ts",
-      body: "hello from W3Kits",
+      body: "hello from AppKits",
       contentType: "text/plain",
     });
     const writeRequest = posted.at(-1) as {
@@ -44,12 +44,12 @@ describe("W3KitsBridge", () => {
       type: string;
       bodyBase64: string;
     };
-    expect(writeRequest.type).toBe("W3KITS_FILE_WRITE");
-    expect(writeRequest.bodyBase64).toBe("aGVsbG8gZnJvbSBXM0tpdHM=");
+    expect(writeRequest.type).toBe("APPKITS_FILE_WRITE");
+    expect(writeRequest.bodyBase64).toBe("aGVsbG8gZnJvbSBBcHBLaXRz");
     window.dispatchEvent(
       new MessageEvent("message", {
         data: {
-          type: "W3KITS_RESPONSE",
+          type: "APPKITS_RESPONSE",
           version: 1,
           requestId: writeRequest.requestId,
           ok: true,

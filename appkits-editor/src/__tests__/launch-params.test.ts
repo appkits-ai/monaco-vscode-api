@@ -14,19 +14,19 @@ const openFile = {
 
 describe("launch params", () => {
   it("reads scoped file launch params", () => {
-    expect(openFileFromLaunchParams({ w3kitsOpenFile: openFile })).toEqual(openFile);
+    expect(openFileFromLaunchParams({ appkitsOpenFile: openFile })).toEqual(openFile);
   });
 
   it("reads host launch and open-file messages", () => {
     expect(
       openFileFromHostMessage({
-        type: "W3KITS_LAUNCH_PARAMS",
-        params: { w3kitsOpenFile: openFile },
+        type: "APPKITS_LAUNCH_PARAMS",
+        params: { appkitsOpenFile: openFile },
       }),
     ).toEqual(openFile);
     expect(
       openFileFromHostMessage({
-        type: "W3KITS_OPEN_FILE",
+        type: "APPKITS_OPEN_FILE",
         file: openFile,
       }),
     ).toEqual(openFile);
@@ -35,7 +35,7 @@ describe("launch params", () => {
   it("rejects folder launch params", () => {
     expect(
       openFileFromLaunchParams({
-        w3kitsOpenFile: { ...openFile, kind: "directory" },
+        appkitsOpenFile: { ...openFile, kind: "directory" },
       }),
     ).toBeNull();
   });

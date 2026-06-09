@@ -1,5 +1,5 @@
-import type { W3KitsBridge } from "./w3kits-bridge";
-import type { W3KitsOpenFile, W3KitsReadFileResult } from "./types";
+import type { AppKitsBridge } from "./appkits-bridge";
+import type { AppKitsOpenFile, AppKitsReadFileResult } from "./types";
 import type {
   SingleFileSession,
   SingleFileSessionInput,
@@ -15,7 +15,7 @@ export interface EditorControllerElements {
 }
 
 export interface EditorControllerOptions {
-  bridge: Pick<W3KitsBridge, "postWindowTitle" | "readFile" | "writeFile">;
+  bridge: Pick<AppKitsBridge, "postWindowTitle" | "readFile" | "writeFile">;
   elements: EditorControllerElements;
   createSession?: (
     host: HTMLElement,
@@ -27,8 +27,8 @@ export class EditorController {
   private readonly bridge: EditorControllerOptions["bridge"];
   private readonly elements: EditorControllerElements;
   private readonly createSession: NonNullable<EditorControllerOptions["createSession"]>;
-  private openFile: W3KitsOpenFile | null = null;
-  private loadedFile: W3KitsReadFileResult | null = null;
+  private openFile: AppKitsOpenFile | null = null;
+  private loadedFile: AppKitsReadFileResult | null = null;
   private session: SingleFileSession | null = null;
   private unsubscribeDirty: (() => void) | null = null;
   private saving = false;
@@ -44,7 +44,7 @@ export class EditorController {
     this.render();
   }
 
-  async open(scopedFile: W3KitsOpenFile): Promise<void> {
+  async open(scopedFile: AppKitsOpenFile): Promise<void> {
     this.setStatus("Opening");
     this.disposeSession();
     this.openFile = scopedFile;
@@ -120,7 +120,7 @@ export class EditorController {
       : false;
     this.elements.fileName.textContent = this.openFile?.name ?? "Waiting for file";
     this.elements.filePath.textContent =
-      this.openFile?.path ?? "Open a file from W3Kits Explorer.";
+      this.openFile?.path ?? "Open a file from AppKits Explorer.";
     this.elements.saveButton.disabled =
       !canEdit || !this.session || !this.dirty || this.saving;
     this.elements.saveButton.textContent = this.saving ? "Saving" : "Save";

@@ -22,16 +22,16 @@ export function initializeVscodeEditorServices(
     servicesPromise = (async () => {
       options.installWorkers?.();
       if (!options.installWorkers) installMonacoWorkers();
-      await (options.installDefaultExtensions ?? loadW3KitsDefaultExtensions)();
+      await (options.installDefaultExtensions ?? loadAppKitsDefaultExtensions)();
       await (options.initialize ?? defaultInitialize)(
-        await (options.serviceOverrides ?? buildW3KitsServiceOverrides)(),
+        await (options.serviceOverrides ?? buildAppKitsServiceOverrides)(),
       );
     })();
   }
   return servicesPromise;
 }
 
-async function loadW3KitsDefaultExtensions(): Promise<void> {
+async function loadAppKitsDefaultExtensions(): Promise<void> {
   await Promise.all([
     import("@codingame/monaco-vscode-theme-defaults-default-extension"),
     import("@codingame/monaco-vscode-javascript-default-extension"),
@@ -49,7 +49,7 @@ async function defaultInitialize(services: IEditorOverrideServices): Promise<voi
   await initialize(services);
 }
 
-export async function buildW3KitsServiceOverrides(): Promise<IEditorOverrideServices> {
+export async function buildAppKitsServiceOverrides(): Promise<IEditorOverrideServices> {
   const [
     base,
     host,

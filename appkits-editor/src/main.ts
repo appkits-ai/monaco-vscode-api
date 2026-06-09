@@ -1,7 +1,7 @@
 import "./style.css";
 import { EditorController } from "./editor-controller";
 import { openFileFromHostMessage } from "./launch-params";
-import { W3KitsBridge } from "./w3kits-bridge";
+import { AppKitsBridge } from "./appkits-bridge";
 
 const elements = {
   host: requiredElement("editor"),
@@ -12,7 +12,7 @@ const elements = {
   saveButton: requiredElement("save") as HTMLButtonElement,
 };
 
-const bridge = new W3KitsBridge(window);
+const bridge = new AppKitsBridge(window);
 const controller = new EditorController({ bridge, elements });
 
 window.addEventListener("message", (event) => {
