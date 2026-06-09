@@ -1,0 +1,45 @@
+{
+  "name": "@w3kits/vscode-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Static W3Kits single-file editor plugin built on @codingame/monaco-vscode-api.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5174",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codingame/monaco-vscode-api": "33.0.9",
+    "@codingame/monaco-vscode-base-service-override": "33.0.9",
+    "@codingame/monaco-vscode-configuration-service-override": "33.0.9",
+    "@codingame/monaco-vscode-css-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-environment-service-override": "33.0.9",
+    "@codingame/monaco-vscode-extensions-service-override": "33.0.9",
+    "@codingame/monaco-vscode-files-service-override": "33.0.9",
+    "@codingame/monaco-vscode-host-service-override": "33.0.9",
+    "@codingame/monaco-vscode-html-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-javascript-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-json-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-languages-service-override": "33.0.9",
+    "@codingame/monaco-vscode-layout-service-override": "33.0.9",
+    "@codingame/monaco-vscode-markdown-basics-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-model-service-override": "33.0.9",
+    "@codingame/monaco-vscode-quickaccess-service-override": "33.0.9",
+    "@codingame/monaco-vscode-textmate-service-override": "33.0.9",
+    "@codingame/monaco-vscode-theme-defaults-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-theme-service-override": "33.0.9",
+    "@codingame/monaco-vscode-typescript-basics-default-extension": "33.0.9",
+    "@codingame/monaco-vscode-yaml-default-extension": "33.0.9",
+    "monaco-editor": "npm:@codingame/monaco-vscode-editor-api@33.0.9",
+    "vscode": "npm:@codingame/monaco-vscode-extension-api@33.0.9"
+  },
+  "devDependencies": {
+    "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
+    "@types/node": "^22.19.7",
+    "happy-dom": "^20.10.2",
+    "typescript": "~5.9.3",
+    "vite": "~8.0.14",
+    "vitest": "^4.0.16"
+  }
+}

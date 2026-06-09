@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>W3Kits VS Code Editor</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="file-meta">
+          <div id="file-name" class="file-name">Waiting for file</div>
+          <div id="file-path" class="file-path">Open a file from W3Kits Explorer.</div>
+        </div>
+        <div class="actions">
+          <span id="status" class="status">Ready</span>
+          <button id="save" type="button" disabled>Save</button>
+        </div>
+      </header>
+      <main id="editor" class="editor"></main>
+      <div id="empty" class="empty-state">
+        <div>No scoped file is open.</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
