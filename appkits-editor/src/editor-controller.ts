@@ -118,9 +118,9 @@ export class EditorController {
     const canEdit = this.openFile
       ? ["editor", "exporter"].includes(this.openFile.role)
       : false;
-    this.elements.fileName.textContent = this.openFile?.name ?? "Waiting for file";
+    this.elements.fileName.textContent = this.openFile?.name ?? "No file open";
     this.elements.filePath.textContent =
-      this.openFile?.path ?? "Open a file from AppKits Explorer.";
+      this.openFile?.path ?? "Choose a file from the Files drawer.";
     this.elements.saveButton.disabled =
       !canEdit || !this.session || !this.dirty || this.saving;
     this.elements.saveButton.textContent = this.saving ? "Saving" : "Save";

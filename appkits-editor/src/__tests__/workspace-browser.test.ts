@@ -51,6 +51,42 @@ describe("WorkspaceBrowser", () => {
     expect(document.getElementById("drawer")?.hidden).toBe(true);
   });
 
+  it("keeps the Files drawer usable when no scoped file is open", async () => {
+    const browser = new WorkspaceBrowser({
+      bridge: {
+        listWorkspaceFiles: vi.fn(async () => ({
+          entries: [
+            { path: "/home/agent/index.ts", name: "index.ts", kind: "file" },
+          ] satisfies AppKitsWorkspaceEntry[],
+        })),
+      },
+      elements: elements(),
+      onOpenFile: vi.fn(),
+    });
+
+    await browser.open();
+    expect(document.getElementById("drawer")?.hidden).toBe(false);
+    expect(document.querySelector(".tree-item")?.textContent).toBe("index.ts");
+  });
+
+  it("shows SDK file loading errors without closing the drawer", async () => {
+    const browser = new WorkspaceBrowser({
+      bridge: {
+        listWorkspaceFiles: vi.fn(async () => {
+          throw new Error("AppKits desktop request failed.");
+        }),
+      },
+      elements: elements(),
+      onOpenFile: vi.fn(),
+    });
+
+    await browser.open();
+    expect(document.getElementById("drawer")?.hidden).toBe(false);
+    expect(document.querySelector(".tree-empty")?.textContent).toBe(
+      "AppKits desktop request failed.",
+    );
+  });
+
   it("converts workspace entries to AppKits open-file launch params", () => {
     expect(
       workspaceEntryToOpenFile({

@@ -1,17 +1,12 @@
-import {
-  APPKITS_BRIDGE_VERSION,
-  APPKITS_DESKTOP_FS_LIST,
-  APPKITS_FILE_READ,
-  APPKITS_FILE_WRITE,
-  APPKITS_RESPONSE,
-  APPKITS_WINDOW_TITLE,
-  type AppKitsBridgeResponse,
-  type AppKitsReadFileResult,
-  type AppKitsWorkspaceEntry,
-  type AppKitsWorkspaceListResult,
-  type AppKitsWriteFileResult,
+import * as appkits from "@appkits-ai/sdk/client";
+import type {
+  AppKitsLaunchParams,
+  AppKitsReadFileResult,
+  AppKitsWorkspaceEntry,
+  AppKitsWorkspaceListResult,
+  AppKitsWriteFileResult,
 } from "./types";
-import { base64ToText, textToBase64 } from "./base64";
+import { base64ToText } from "./base64";
 
 export class AppKitsBridgeError extends Error {
   readonly code: string;
@@ -23,74 +18,27 @@ export class AppKitsBridgeError extends Error {
   }
 }
 
-type PendingRequest = {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  timeoutId: number;
-};
-
-export interface AppKitsBridgeOptions {
-  requestTimeoutMs?: number;
-  requestIdPrefix?: string;
-}
-
 export class AppKitsBridge {
-  private readonly pending = new Map<string, PendingRequest>();
-  private readonly requestTimeoutMs: number;
-  private readonly requestIdPrefix: string;
-  private requestIndex = 0;
-
-  constructor(
-    private readonly hostWindow: Window = window,
-    options: AppKitsBridgeOptions = {},
-  ) {
-    this.requestTimeoutMs = options.requestTimeoutMs ?? 15000;
-    this.requestIdPrefix = options.requestIdPrefix ?? "appkits_editor";
-    this.hostWindow.addEventListener("message", this.handleMessage);
-  }
-
-  dispose(): void {
-    this.hostWindow.removeEventListener("message", this.handleMessage);
-    for (const [requestId, pending] of this.pending) {
-      this.hostWindow.clearTimeout(pending.timeoutId);
-      pending.reject(
-        new AppKitsBridgeError(
-          "bridge_disposed",
-          `Bridge disposed before ${requestId} completed.`,
-        ),
-      );
-    }
-    this.pending.clear();
-  }
+  dispose(): void {}
 
   postReady(): void {
-    this.postToParent({ type: "APP_READY" });
+    window.parent?.postMessage({ type: "APP_READY" }, "*");
   }
 
   postWindowTitle(title: string): void {
-    this.postToParent({
-      type: APPKITS_WINDOW_TITLE,
-      version: APPKITS_BRIDGE_VERSION,
-      title,
-    });
+    void appkits.Window.setTitle(title).catch(() => undefined);
+  }
+
+  async launchParams(): Promise<AppKitsLaunchParams> {
+    return (await appkits.Launch.params()) as AppKitsLaunchParams;
   }
 
   async readFile(path: string): Promise<AppKitsReadFileResult> {
-    const data = await this.request({
-      type: APPKITS_FILE_READ,
-      version: APPKITS_BRIDGE_VERSION,
-      path,
-    });
-    return parseReadFileResult(data);
+    return parseReadFileResult(await appkits.FileSystem.read(path));
   }
 
   async listWorkspaceFiles(): Promise<AppKitsWorkspaceListResult> {
-    const data = await this.request({
-      type: APPKITS_DESKTOP_FS_LIST,
-      version: APPKITS_BRIDGE_VERSION,
-      path: "/home/agent",
-    });
-    return parseWorkspaceListResult(data);
+    return parseWorkspaceListResult(await appkits.FileSystem.list("/home/agent"));
   }
 
   async writeFile(input: {
@@ -98,71 +46,13 @@ export class AppKitsBridge {
     body: string;
     contentType: string;
   }): Promise<AppKitsWriteFileResult> {
-    const data = await this.request({
-      type: APPKITS_FILE_WRITE,
-      version: APPKITS_BRIDGE_VERSION,
+    const data = await appkits.FileSystem.write({
       path: input.path,
       body: input.body,
-      bodyBase64: textToBase64(input.body),
       contentType: input.contentType,
     });
     return parseWriteFileResult(data, input.path, input.contentType);
   }
-
-  private request(message: Record<string, unknown>): Promise<unknown> {
-    const requestId = `${this.requestIdPrefix}_${Date.now()}_${++this.requestIndex}`;
-    const payload = { ...message, requestId };
-    return new Promise((resolve, reject) => {
-      const timeoutId = this.hostWindow.setTimeout(() => {
-        this.pending.delete(requestId);
-        reject(
-          new AppKitsBridgeError(
-            "bridge_timeout",
-            `Timed out waiting for ${String(message.type)} response.`,
-          ),
-        );
-      }, this.requestTimeoutMs);
-      this.pending.set(requestId, { resolve, reject, timeoutId });
-      this.postToParent(payload);
-    });
-  }
-
-  private readonly handleMessage = (event: MessageEvent): void => {
-    const response = parseBridgeResponse(event.data);
-    if (!response) return;
-    const pending = this.pending.get(response.requestId);
-    if (!pending) return;
-    this.pending.delete(response.requestId);
-    this.hostWindow.clearTimeout(pending.timeoutId);
-    if (response.ok) {
-      pending.resolve(response.data);
-      return;
-    }
-    pending.reject(
-      new AppKitsBridgeError(
-        response.error?.code || "bridge_error",
-        response.error?.message || "AppKits bridge request failed.",
-      ),
-    );
-  };
-
-  private postToParent(message: Record<string, unknown>): void {
-    this.hostWindow.parent.postMessage(message, "*");
-  }
-}
-
-function parseBridgeResponse(value: unknown): AppKitsBridgeResponse | null {
-  if (!value || typeof value !== "object") return null;
-  const candidate = value as Partial<AppKitsBridgeResponse>;
-  if (
-    candidate.type !== APPKITS_RESPONSE ||
-    candidate.version !== APPKITS_BRIDGE_VERSION ||
-    typeof candidate.requestId !== "string" ||
-    typeof candidate.ok !== "boolean"
-  ) {
-    return null;
-  }
-  return candidate as AppKitsBridgeResponse;
 }
 
 function parseReadFileResult(value: unknown): AppKitsReadFileResult {

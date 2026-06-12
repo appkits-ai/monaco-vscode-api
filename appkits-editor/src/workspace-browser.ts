@@ -23,6 +23,7 @@ export class WorkspaceBrowser {
   private entries: AppKitsWorkspaceEntry[] = [];
   private selectedPath: string | null = null;
   private loading = false;
+  private error: string | null = null;
 
   constructor(options: WorkspaceBrowserOptions) {
     this.bridge = options.bridge;
@@ -46,9 +47,13 @@ export class WorkspaceBrowser {
 
   async refresh(): Promise<void> {
     this.loading = true;
+    this.error = null;
     this.render();
     try {
       this.entries = sortEntries((await this.bridge.listWorkspaceFiles()).entries);
+    } catch (error) {
+      this.entries = [];
+      this.error = errorMessage(error);
     } finally {
       this.loading = false;
       this.render();
@@ -66,6 +71,13 @@ export class WorkspaceBrowser {
       const item = document.createElement("div");
       item.className = "tree-empty";
       item.textContent = "Loading";
+      this.elements.tree.append(item);
+      return;
+    }
+    if (this.error) {
+      const item = document.createElement("div");
+      item.className = "tree-empty";
+      item.textContent = this.error;
       this.elements.tree.append(item);
       return;
     }
@@ -127,4 +139,8 @@ function isDirectHomeChild(path: string): boolean {
 
 function filenameFromPath(path: string): string {
   return path.split("/").filter(Boolean).at(-1) || path;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unable to load files.";
 }

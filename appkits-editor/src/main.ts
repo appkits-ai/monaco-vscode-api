@@ -1,6 +1,6 @@
 import "./style.css";
 import { EditorController } from "./editor-controller";
-import { openFileFromHostMessage } from "./launch-params";
+import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
 import { AppKitsBridge } from "./appkits-bridge";
 import { WorkspaceBrowser } from "./workspace-browser";
 
@@ -17,7 +17,7 @@ const elements = {
   tree: requiredElement("file-tree"),
 };
 
-const bridge = new AppKitsBridge(window);
+const bridge = new AppKitsBridge();
 const controller = new EditorController({ bridge, elements });
 const browser = new WorkspaceBrowser({
   bridge,
@@ -44,6 +44,17 @@ window.addEventListener("beforeunload", () => {
 });
 
 bridge.postReady();
+void bootstrap();
+
+async function bootstrap(): Promise<void> {
+  const openFile = openFileFromLaunchParams(await bridge.launchParams().catch(() => ({})));
+  if (openFile) {
+    browser.select(openFile.path);
+    await controller.open(openFile);
+    return;
+  }
+  await browser.open();
+}
 
 function requiredElement(id: string): HTMLElement {
   const element = document.getElementById(id);

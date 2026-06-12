@@ -1,6 +1,6 @@
 {
   "name": "@appkits-ai/vscode-editor",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "type": "module",
   "description": "Static AppKits single-file editor plugin built on @codingame/monaco-vscode-api.",
@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@appkits-ai/sdk": "0.1.0",
     "@codingame/monaco-vscode-api": "33.0.9",
     "@codingame/monaco-vscode-base-service-override": "33.0.9",
     "@codingame/monaco-vscode-configuration-service-override": "33.0.9",

@@ -1,95 +1,85 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppKitsBridge } from "../appkits-bridge";
 
+const sdk = vi.hoisted(() => ({
+  FileSystem: {
+    list: vi.fn(),
+    read: vi.fn(),
+    write: vi.fn(),
+  },
+  Launch: {
+    params: vi.fn(),
+  },
+  Window: {
+    setTitle: vi.fn(),
+  },
+}));
+
+vi.mock("@appkits-ai/sdk/client", () => sdk);
+
 describe("AppKitsBridge", () => {
-  it("reads and writes through request/response postMessage", async () => {
-    vi.useFakeTimers();
-    const posted: unknown[] = [];
-    const bridge = new AppKitsBridge(window, {
-      requestIdPrefix: "test",
-      requestTimeoutMs: 5000,
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("reads and writes through the AppKits SDK filesystem", async () => {
+    sdk.FileSystem.list.mockResolvedValueOnce({
+      entries: [
+        {
+          path: "/home/agent/app.ts",
+          name: "app.ts",
+          kind: "file",
+          contentType: "text/typescript",
+          local: true,
+        },
+      ],
     });
-    vi.spyOn(window.parent, "postMessage").mockImplementation((message) => {
-      posted.push(message);
+    sdk.FileSystem.read.mockResolvedValueOnce({
+      path: "/home/agent/workspace/main.ts",
+      body: "hello",
+      contentType: "text/plain",
+      local: true,
+    });
+    sdk.FileSystem.write.mockResolvedValueOnce({
+      path: "/home/agent/workspace/main.ts",
+      contentType: "text/plain",
     });
 
-    const listPromise = bridge.listWorkspaceFiles();
-    const listRequest = posted.at(-1) as { requestId: string; type: string; path: string };
-    expect(listRequest.type).toBe("APPKITS_DESKTOP_FS_LIST");
-    expect(listRequest.path).toBe("/home/agent");
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: "APPKITS_RESPONSE",
-          version: 1,
-          requestId: listRequest.requestId,
-          ok: true,
-          data: {
-            entries: [
-              {
-                path: "/home/agent/app.ts",
-                name: "app.ts",
-                kind: "file",
-                contentType: "text/typescript",
-                local: true,
-              },
-            ],
-          },
-        },
-      }),
-    );
-    await expect(listPromise).resolves.toMatchObject({
+    const bridge = new AppKitsBridge();
+
+    await expect(bridge.listWorkspaceFiles()).resolves.toMatchObject({
       entries: [{ path: "/home/agent/app.ts", kind: "file" }],
     });
+    expect(sdk.FileSystem.list).toHaveBeenCalledWith("/home/agent");
 
-    const readPromise = bridge.readFile("/home/agent/workspace/main.ts");
-    const readRequest = posted.at(-1) as { requestId: string; type: string };
-    expect(readRequest.type).toBe("APPKITS_FILE_READ");
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: "APPKITS_RESPONSE",
-          version: 1,
-          requestId: readRequest.requestId,
-          ok: true,
-          data: {
-            path: "/home/agent/workspace/main.ts",
-            body: "hello",
-            contentType: "text/plain",
-            local: true,
-          },
-        },
-      }),
-    );
-    await expect(readPromise).resolves.toMatchObject({ body: "hello" });
+    await expect(bridge.readFile("/home/agent/workspace/main.ts")).resolves.toMatchObject({
+      body: "hello",
+    });
+    expect(sdk.FileSystem.read).toHaveBeenCalledWith("/home/agent/workspace/main.ts");
 
-    const writePromise = bridge.writeFile({
+    await expect(bridge.writeFile({
+      path: "/home/agent/workspace/main.ts",
+      body: "hello from AppKits",
+      contentType: "text/plain",
+    })).resolves.toMatchObject({
+      path: "/home/agent/workspace/main.ts",
+    });
+    expect(sdk.FileSystem.write).toHaveBeenCalledWith({
       path: "/home/agent/workspace/main.ts",
       body: "hello from AppKits",
       contentType: "text/plain",
     });
-    const writeRequest = posted.at(-1) as {
-      requestId: string;
-      type: string;
-      bodyBase64: string;
-    };
-    expect(writeRequest.type).toBe("APPKITS_FILE_WRITE");
-    expect(writeRequest.bodyBase64).toBe("aGVsbG8gZnJvbSBBcHBLaXRz");
-    window.dispatchEvent(
-      new MessageEvent("message", {
-        data: {
-          type: "APPKITS_RESPONSE",
-          version: 1,
-          requestId: writeRequest.requestId,
-          ok: true,
-          data: { path: "/home/agent/workspace/main.ts", contentType: "text/plain" },
-        },
-      }),
-    );
-    await expect(writePromise).resolves.toMatchObject({
-      path: "/home/agent/workspace/main.ts",
+  });
+
+  it("reads launch params and sets the window title through the SDK", async () => {
+    sdk.Launch.params.mockResolvedValueOnce({ appkitsOpenFile: { path: "/home/agent/app.ts" } });
+    sdk.Window.setTitle.mockResolvedValueOnce({ title: "app.ts" });
+    const bridge = new AppKitsBridge();
+
+    await expect(bridge.launchParams()).resolves.toEqual({
+      appkitsOpenFile: { path: "/home/agent/app.ts" },
     });
-    bridge.dispose();
-    vi.useRealTimers();
+    bridge.postWindowTitle("app.ts");
+    expect(sdk.Window.setTitle).toHaveBeenCalledWith("app.ts");
   });
 });
