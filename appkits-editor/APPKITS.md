@@ -1,16 +1,16 @@
 # AppKits VS Code Editor Plugin
 
-This fork adds `appkits-editor/`, a static browser plugin for AppKits. It is a single-file editor built on `@codingame/monaco-vscode-api` package family `33.0.9`.
+This fork adds `appkits-editor/`, a static browser plugin for AppKits. It runs the `@codingame/monaco-vscode-api` workbench package family `33.0.9` and connects the VS Code file service to the AppKits Core SDK filesystem.
 
 ## Scope
 
 - Runtime: `browser-web`, packaged from `appkits-editor/dist`.
 - Launch: installed marketplace app with slug `vscode-editor`.
-- File access: only the scoped file supplied by `APPKITS_LAUNCH_PARAMS` or `APPKITS_OPEN_FILE`.
-- Bridge calls: `APPKITS_FILE_READ` and `APPKITS_FILE_WRITE`.
-- Editor scope: one file at a time through `createModelReference` and a filesystem overlay.
+- File access: `/home/agent` workspace through `@appkits-ai/sdk/client` `FileSystem.*`.
+- Launch: `appkitsOpenFile` and host open-file messages open the target file in the workbench editor.
+- Editor scope: upstream VS Code workbench shell with Explorer, tabs, editor groups, status UI, and the AppKits VFS provider.
 
-The app does not include the full VS Code workbench, folder explorer, terminal, debugger, extension host, VSIX loading, or workspace search.
+The app does not provide a native terminal or unrestricted host filesystem. All file operations remain scoped to the AppKits Core SDK VFS contract.
 
 ## Development
 

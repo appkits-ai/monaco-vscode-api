@@ -6,28 +6,7 @@
     <title>AppKits VS Code Editor</title>
   </head>
   <body>
-    <div id="app">
-      <header class="app-header">
-        <button id="files" class="files-button" type="button">Files</button>
-        <div class="file-meta">
-          <div id="file-name" class="file-name">No file open</div>
-          <div id="file-path" class="file-path">Choose a file from the Files drawer.</div>
-        </div>
-        <div class="actions">
-          <span id="status" class="status">Ready</span>
-          <button id="save" type="button" disabled>Save</button>
-        </div>
-      </header>
-      <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
-      <aside id="file-drawer" class="file-drawer" hidden>
-        <div class="drawer-title">Files</div>
-        <div id="file-tree" class="file-tree"></div>
-      </aside>
-      <main id="editor" class="editor"></main>
-      <div id="empty" class="empty-state">
-        <div>Choose a file from the Files drawer.</div>
-      </div>
-    </div>
+    <div id="workbench"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
