@@ -17,6 +17,22 @@ describe("launch params", () => {
     expect(openFileFromLaunchParams({ appkitsOpenFile: openFile })).toEqual(openFile);
   });
 
+  it("maps desktop-root launch paths into the AppKits workspace root", () => {
+    expect(
+      openFileFromLaunchParams({
+        appkitsOpenFile: {
+          ...openFile,
+          path: "/.config/appkits/desktop-icons.json",
+          name: "desktop-icons.json",
+          contentType: "application/json",
+        },
+      }),
+    ).toMatchObject({
+      path: "/home/agent/.config/appkits/desktop-icons.json",
+      name: "desktop-icons.json",
+    });
+  });
+
   it("reads host launch and open-file messages", () => {
     expect(
       openFileFromHostMessage({

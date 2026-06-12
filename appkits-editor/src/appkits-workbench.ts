@@ -46,10 +46,10 @@ import "@codingame/monaco-vscode-html-default-extension";
 import "@codingame/monaco-vscode-markdown-basics-default-extension";
 import "@codingame/monaco-vscode-yaml-default-extension";
 import {
-  APPKITS_WORKSPACE_FILE,
   APPKITS_WORKSPACE_ROOT,
   AppKitsFileSystemProvider,
 } from "./appkits-file-system-provider";
+import { APPKITS_WORKSPACE_FILE, normalizeAppKitsPath } from "./appkits-paths";
 import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
 import type { AppKitsOpenFile } from "./types";
 
@@ -162,13 +162,13 @@ function constructionOptions(): IWorkbenchConstructionOptions {
       nameLong: "AppKits VS Code Editor",
       applicationName: "appkits-vscode-editor",
       dataFolderName: ".appkits-vscode-editor",
-      version: "0.1.9",
+      version: "0.1.10",
     },
   };
 }
 
 async function openAppKitsFile(file: AppKitsOpenFile): Promise<void> {
-  const uri = monaco.Uri.file(file.path);
+  const uri = monaco.Uri.file(normalizeAppKitsPath(file.path));
   const editorService = await getService(IEditorService);
   await editorService.openEditor({ resource: uri, options: { pinned: true } });
   await appkits.Window.setTitle(file.name || basename(file.path)).catch(() => undefined);

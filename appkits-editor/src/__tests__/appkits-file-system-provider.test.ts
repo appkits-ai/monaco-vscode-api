@@ -105,6 +105,32 @@ describe("AppKitsFileSystemProvider", () => {
       contentType: "text/typescript",
     });
   });
+
+  it("stats hidden launch targets even when their parents are absent from cached listings", async () => {
+    sdk.FileSystem.list
+      .mockResolvedValueOnce({ entries: [] })
+      .mockResolvedValueOnce({ entries: [{ path: "/home/agent/.config/appkits/desktop-icons.json", kind: "file", size: 2 }] });
+    sdk.FileSystem.read
+      .mockRejectedValueOnce(new Error("Is a directory"))
+      .mockResolvedValueOnce({
+        path: "/home/agent/.config/appkits/desktop-icons.json",
+        body: "{}",
+        contentType: "application/json",
+      });
+
+    const provider = new AppKitsFileSystemProvider();
+    await expect(provider.stat(uri("/home/agent/.config/appkits"))).resolves.toMatchObject({
+      type: FileType.Directory,
+    });
+    await expect(provider.stat(uri("/.config/appkits/desktop-icons.json"))).resolves.toMatchObject({
+      type: FileType.File,
+      size: 2,
+    });
+    await expect(provider.readFile(uri("/.config/appkits/desktop-icons.json"))).resolves.toEqual(
+      new TextEncoder().encode("{}"),
+    );
+    expect(sdk.FileSystem.read).toHaveBeenLastCalledWith("/home/agent/.config/appkits/desktop-icons.json");
+  });
 });
 
 function uri(path: string): { path: string } {

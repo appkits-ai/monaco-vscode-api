@@ -13,9 +13,13 @@ import {
   type IStat,
   type IWatchOptions,
 } from "@codingame/monaco-vscode-files-service-override";
+import {
+  APPKITS_WORKSPACE_FILE,
+  APPKITS_WORKSPACE_ROOT,
+  normalizeAppKitsPath,
+} from "./appkits-paths";
 
-export const APPKITS_WORKSPACE_ROOT = "/home/agent";
-export const APPKITS_WORKSPACE_FILE = "/appkits.code-workspace";
+export { APPKITS_WORKSPACE_FILE, APPKITS_WORKSPACE_ROOT };
 
 export interface AppKitsFileEntry {
   path: string;
@@ -92,7 +96,7 @@ export class AppKitsFileSystemProvider
     const parent = dirname(path);
     const entries = await this.list(parent);
     const entry = entries.find((item) => item.path === path);
-    if (!entry) throw providerError("File not found", FileSystemProviderErrorCode.FileNotFound);
+    if (!entry) return this.statBySdk(path);
     return statForEntry(entry);
   }
 
@@ -206,6 +210,34 @@ export class AppKitsFileSystemProvider
     this.directoryCache.delete(normalizePath(path));
   }
 
+  private async statBySdk(path: string): Promise<IStat> {
+    try {
+      return await this.statFileByRead(path);
+    } catch (fileError) {
+      try {
+        await this.list(path);
+        return statForEntry(directoryEntry(path));
+      } catch {
+        throw fileError;
+      }
+    }
+  }
+
+  private async statFileByRead(path: string): Promise<IStat> {
+    try {
+      const file = await appkits.FileSystem.read(path);
+      const size =
+        typeof file.bodyBase64 === "string"
+          ? base64ToBytes(file.bodyBase64).byteLength
+          : textEncoder.encode(typeof file.body === "string" ? file.body : "").byteLength;
+      const entry = fileEntry(path, size);
+      this.fileStatCache.set(path, entry);
+      return statForEntry(entry);
+    } catch (error) {
+      throw providerError(errorMessage(error), FileSystemProviderErrorCode.FileNotFound);
+    }
+  }
+
   private fire(path: string, type: FileChangeType): void {
     this.changes.fire([
       { resource: uriFile(path), type },
@@ -253,8 +285,9 @@ function workspaceFileBytes(): Uint8Array {
 }
 
 function normalizePath(path: string): string {
-  const prefixed = path.startsWith("/") ? path : `/${path}`;
-  return prefixed.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+  const normalized = path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+  if (normalized === "/" || normalized === "/home") return normalized;
+  return normalizeAppKitsPath(path);
 }
 
 function dirname(path: string): string {

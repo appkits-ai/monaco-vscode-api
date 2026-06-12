@@ -1,6 +1,6 @@
 {
   "name": "@appkits-ai/vscode-editor",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "description": "Static AppKits VS Code workbench plugin built on @codingame/monaco-vscode-api.",

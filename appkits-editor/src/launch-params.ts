@@ -1,4 +1,5 @@
 import type { AppKitsOpenFile } from "./types";
+import { normalizeAppKitsPath } from "./appkits-paths";
 import { APPKITS_LAUNCH_PARAMS, APPKITS_OPEN_FILE } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -19,7 +20,7 @@ export function normalizeOpenFile(value: unknown): AppKitsOpenFile | null {
     version: 1,
     role: typeof value.role === "string" ? value.role : "viewer",
     scope: "desktop-file",
-    path: value.path,
+    path: normalizeAppKitsPath(value.path),
     name: value.name,
     kind: "file",
     contentType:
