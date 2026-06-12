@@ -18,10 +18,12 @@ body {
 }
 
 #app {
+  position: relative;
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
@@ -35,8 +37,16 @@ body {
   padding: 8px 12px;
 }
 
+.files-button {
+  flex: none;
+  min-width: 72px;
+  background: #263142;
+  color: #eef2f7;
+}
+
 .file-meta {
   min-width: 0;
+  flex: 1;
 }
 
 .file-name {
@@ -94,6 +104,69 @@ button:disabled {
   min-width: 0;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
+}
+
+.drawer-backdrop {
+  position: absolute;
+  inset: 52px 0 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.file-drawer {
+  position: absolute;
+  top: 52px;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  width: min(320px, 86vw);
+  border-right: 1px solid #2a2f3a;
+  background: #171a21;
+  box-shadow: 18px 0 42px rgba(0, 0, 0, 0.32);
+  overflow: auto;
+}
+
+.drawer-title {
+  padding: 11px 12px 8px;
+  color: #aab3c2;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.file-tree {
+  display: grid;
+  gap: 2px;
+  padding: 0 8px 12px;
+}
+
+.tree-item {
+  width: 100%;
+  min-height: 34px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #eef2f7;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-item[data-kind="directory"] {
+  color: #f5c542;
+}
+
+.tree-item[data-selected="true"],
+.tree-item:hover {
+  background: #263142;
+}
+
+.tree-empty {
+  padding: 10px 6px;
+  color: #9da7b8;
+  font-size: 13px;
 }
 
 .empty-state {
@@ -108,4 +181,44 @@ button:disabled {
 
 .empty-state[hidden] {
   display: none;
+}
+
+
+@media (max-width: 780px), (pointer: coarse) {
+  .app-header {
+    min-height: 84px;
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 8px;
+  }
+
+  .files-button,
+  button {
+    min-height: 40px;
+  }
+
+  .file-meta {
+    flex-basis: calc(100% - 88px);
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .status {
+    max-width: calc(100vw - 96px);
+  }
+
+  .drawer-backdrop {
+    inset: 84px 0 0;
+  }
+
+  .file-drawer {
+    top: 84px;
+  }
+
+  .empty-state {
+    inset: 84px 0 0;
+  }
 }

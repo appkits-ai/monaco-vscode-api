@@ -2,6 +2,7 @@ import "./style.css";
 import { EditorController } from "./editor-controller";
 import { openFileFromHostMessage } from "./launch-params";
 import { AppKitsBridge } from "./appkits-bridge";
+import { WorkspaceBrowser } from "./workspace-browser";
 
 const elements = {
   host: requiredElement("editor"),
@@ -10,14 +11,31 @@ const elements = {
   filePath: requiredElement("file-path"),
   status: requiredElement("status"),
   saveButton: requiredElement("save") as HTMLButtonElement,
+  filesButton: requiredElement("files") as HTMLButtonElement,
+  drawer: requiredElement("file-drawer"),
+  drawerBackdrop: requiredElement("drawer-backdrop"),
+  tree: requiredElement("file-tree"),
 };
 
 const bridge = new AppKitsBridge(window);
 const controller = new EditorController({ bridge, elements });
+const browser = new WorkspaceBrowser({
+  bridge,
+  elements: {
+    filesButton: elements.filesButton,
+    drawer: elements.drawer,
+    backdrop: elements.drawerBackdrop,
+    tree: elements.tree,
+  },
+  onOpenFile: (file) => void controller.open(file),
+});
 
 window.addEventListener("message", (event) => {
   const openFile = openFileFromHostMessage(event.data);
-  if (openFile) void controller.open(openFile);
+  if (openFile) {
+    browser.select(openFile.path);
+    void controller.open(openFile);
+  }
 });
 
 window.addEventListener("beforeunload", () => {

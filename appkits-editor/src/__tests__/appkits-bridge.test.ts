@@ -13,6 +13,35 @@ describe("AppKitsBridge", () => {
       posted.push(message);
     });
 
+    const listPromise = bridge.listWorkspaceFiles();
+    const listRequest = posted.at(-1) as { requestId: string; type: string; path: string };
+    expect(listRequest.type).toBe("APPKITS_DESKTOP_FS_LIST");
+    expect(listRequest.path).toBe("/home/agent");
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          type: "APPKITS_RESPONSE",
+          version: 1,
+          requestId: listRequest.requestId,
+          ok: true,
+          data: {
+            entries: [
+              {
+                path: "/home/agent/app.ts",
+                name: "app.ts",
+                kind: "file",
+                contentType: "text/typescript",
+                local: true,
+              },
+            ],
+          },
+        },
+      }),
+    );
+    await expect(listPromise).resolves.toMatchObject({
+      entries: [{ path: "/home/agent/app.ts", kind: "file" }],
+    });
+
     const readPromise = bridge.readFile("/home/agent/workspace/main.ts");
     const readRequest = posted.at(-1) as { requestId: string; type: string };
     expect(readRequest.type).toBe("APPKITS_FILE_READ");
