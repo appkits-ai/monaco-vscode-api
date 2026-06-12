@@ -5,6 +5,7 @@ export const APPKITS_FILE_WRITE = "APPKITS_FILE_WRITE";
 export const APPKITS_LAUNCH_PARAMS = "APPKITS_LAUNCH_PARAMS";
 export const APPKITS_OPEN_FILE = "APPKITS_OPEN_FILE";
 export const APPKITS_WINDOW_TITLE = "APPKITS_WINDOW_TITLE";
+export const APPKITS_DESKTOP_FS_LIST = "APPKITS_DESKTOP_FS_LIST";
 
 export type AppKitsFileRole = "viewer" | "editor" | "exporter" | string;
 
@@ -48,4 +49,20 @@ export interface AppKitsWriteFileResult {
   path: string;
   contentType: string;
   local: boolean;
+}
+
+
+export interface AppKitsWorkspaceEntry {
+  path: string;
+  name?: string;
+  kind: "file" | "directory";
+  contentType?: string;
+  size?: number;
+  local?: boolean;
+  temporary?: boolean;
+}
+
+export interface AppKitsWorkspaceListResult {
+  entries: AppKitsWorkspaceEntry[];
+  temporary?: boolean;
 }

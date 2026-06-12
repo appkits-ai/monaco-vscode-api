@@ -1,11 +1,14 @@
 import {
   APPKITS_BRIDGE_VERSION,
+  APPKITS_DESKTOP_FS_LIST,
   APPKITS_FILE_READ,
   APPKITS_FILE_WRITE,
   APPKITS_RESPONSE,
   APPKITS_WINDOW_TITLE,
   type AppKitsBridgeResponse,
   type AppKitsReadFileResult,
+  type AppKitsWorkspaceEntry,
+  type AppKitsWorkspaceListResult,
   type AppKitsWriteFileResult,
 } from "./types";
 import { base64ToText, textToBase64 } from "./base64";
@@ -79,6 +82,15 @@ export class AppKitsBridge {
       path,
     });
     return parseReadFileResult(data);
+  }
+
+  async listWorkspaceFiles(): Promise<AppKitsWorkspaceListResult> {
+    const data = await this.request({
+      type: APPKITS_DESKTOP_FS_LIST,
+      version: APPKITS_BRIDGE_VERSION,
+      path: "/home/agent",
+    });
+    return parseWorkspaceListResult(data);
   }
 
   async writeFile(input: {
@@ -197,4 +209,29 @@ function parseWriteFileResult(
         : fallbackContentType,
     local: data.local === true,
   };
+}
+
+
+function parseWorkspaceListResult(value: unknown): AppKitsWorkspaceListResult {
+  if (!value || typeof value !== "object") {
+    throw new AppKitsBridgeError("invalid_workspace_response", "Missing workspace data.");
+  }
+  const data = value as Partial<AppKitsWorkspaceListResult>;
+  const entries = Array.isArray(data.entries)
+    ? data.entries
+        .filter((entry: unknown): entry is Record<string, unknown> =>
+          Boolean(entry && typeof entry === "object"),
+        )
+        .map((entry): AppKitsWorkspaceEntry => ({
+          path: typeof entry.path === "string" ? entry.path : "",
+          name: typeof entry.name === "string" ? entry.name : undefined,
+          kind: entry.kind === "directory" ? "directory" : "file",
+          contentType: typeof entry.contentType === "string" ? entry.contentType : undefined,
+          size: typeof entry.size === "number" ? entry.size : undefined,
+          local: entry.local === true,
+          temporary: entry.temporary === true,
+        }))
+        .filter((entry) => entry.path)
+    : [];
+  return { entries, temporary: data.temporary === true };
 }
