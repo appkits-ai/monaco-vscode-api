@@ -162,7 +162,7 @@ function constructionOptions(): IWorkbenchConstructionOptions {
       nameLong: "AppKits VS Code Editor",
       applicationName: "appkits-vscode-editor",
       dataFolderName: ".appkits-vscode-editor",
-      version: "0.1.8",
+      version: "0.1.9",
     },
   };
 }
