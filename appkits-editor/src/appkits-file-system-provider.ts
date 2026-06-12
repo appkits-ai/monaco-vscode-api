@@ -215,11 +215,12 @@ export class AppKitsFileSystemProvider
       return await this.statFileByRead(path);
     } catch (fileError) {
       try {
-        await this.list(path);
-        return statForEntry(directoryEntry(path));
+        const entries = await this.list(path);
+        if (entries.length > 0) return statForEntry(directoryEntry(path));
       } catch {
-        throw fileError;
+        // Fall through to the original file read failure.
       }
+      throw fileError;
     }
   }
 
