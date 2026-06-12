@@ -15,6 +15,17 @@ export interface AppKitsLaunchParams {
   appkitsOpenFile?: AppKitsOpenFile;
 }
 
+export interface AppKitsFileEntry {
+  path: string;
+  name?: string;
+  kind: "file" | "directory";
+  contentType?: string;
+  size?: number;
+  updatedAt?: string;
+  local?: boolean;
+  temporary?: boolean;
+}
+
 export interface AppKitsReadFileResult {
   path: string;
   name?: string;

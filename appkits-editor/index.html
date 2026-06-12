@@ -9,18 +9,23 @@
     <div id="app">
       <header class="app-header">
         <div class="file-meta">
-          <div id="file-name" class="file-name">Waiting for file</div>
-          <div id="file-path" class="file-path">Open a file from AppKits Explorer.</div>
+          <div id="file-name" class="file-name">/home/agent</div>
+          <div id="file-path" class="file-path">Browse workspace files from the left tree.</div>
         </div>
         <div class="actions">
           <span id="status" class="status">Ready</span>
+          <button id="refresh" type="button">Refresh</button>
           <button id="save" type="button" disabled>Save</button>
         </div>
       </header>
-      <main id="editor" class="editor"></main>
-      <div id="empty" class="empty-state">
-        <div>No scoped file is open.</div>
-      </div>
+      <main class="workspace-shell">
+        <aside class="sidebar">
+          <div class="sidebar-title">Workspace</div>
+          <div id="workspace-path" class="workspace-path">/home/agent</div>
+          <nav id="file-tree" class="file-tree" aria-label="Workspace files"></nav>
+        </aside>
+        <section id="editor" class="editor"></section>
+      </main>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

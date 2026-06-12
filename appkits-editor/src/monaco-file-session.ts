@@ -1,10 +1,7 @@
 import * as monaco from "monaco-editor";
 import * as vscode from "vscode";
-import {
-  RegisteredFileSystemProvider,
-  RegisteredMemoryFile,
-  registerFileSystemOverlay,
-} from "@codingame/monaco-vscode-files-service-override";
+import type { AppKitsVfsClient } from "./appkits-vfs-provider";
+import { registerAppKitsVfsOverlay } from "./appkits-vfs-provider";
 import { initializeVscodeEditorServices } from "./vscode-services";
 import type {
   SingleFileSession,
@@ -18,22 +15,26 @@ interface DisposableLike {
 export async function createMonacoFileSession(
   host: HTMLElement,
   input: SingleFileSessionInput,
+  vfsClient?: AppKitsVfsClient,
 ): Promise<SingleFileSession> {
   await initializeVscodeEditorServices();
   host.replaceChildren();
 
   const uri = vscode.Uri.file(normalizeModelPath(input.path, input.name));
-  const provider = new RegisteredFileSystemProvider(false);
-  provider.registerFile(new RegisteredMemoryFile(uri, input.body));
-  const overlay = registerFileSystemOverlay(1, provider);
+  const overlay = vfsClient ? await registerAppKitsVfsOverlay(vfsClient) : undefined;
   const modelReference = await monaco.editor.createModelReference(uri);
+  const model = modelReference.object.textEditorModel;
+  if (!model) throw new Error("model_not_available");
+  if (!vfsClient && model.getValue() !== input.body) {
+    model.setValue(input.body);
+  }
   const editor = monaco.editor.create(host, {
-    model: modelReference.object.textEditorModel,
+    model,
     automaticLayout: true,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
   });
-  const disposables: DisposableLike[] = [overlay];
+  const disposables: DisposableLike[] = overlay ? [overlay] : [];
 
   const dirtyListeners = new Set<(dirty: boolean) => void>();
   const notifyDirty = () => {

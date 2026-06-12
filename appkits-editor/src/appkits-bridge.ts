@@ -2,9 +2,11 @@ import {
   createAppKitsClient,
   type AppKitsClient,
   type AppKitsClientOptions,
+  type AppKitsFileEntry as SdkFileEntry,
   type AppKitsFileReadResult as SdkFileReadResult,
 } from "@appkits-ai/sdk/browser";
 import type {
+  AppKitsFileEntry,
   AppKitsLaunchParams,
   AppKitsReadFileResult,
   AppKitsWriteFileResult,
@@ -20,12 +22,6 @@ export class AppKitsBridgeError extends Error {
     this.code = code;
   }
 }
-
-type PendingRequest = {
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  timeoutId: number;
-};
 
 export interface AppKitsBridgeOptions extends AppKitsClientOptions {
   requestTimeoutMs?: number;
@@ -62,6 +58,14 @@ export class AppKitsBridge {
     return parseReadFileResult(data);
   }
 
+  async readFileBytes(path: string): Promise<Uint8Array> {
+    const data = await this.client.files.read(path);
+    if (typeof data.bodyBase64 === "string") {
+      return Uint8Array.from(atob(data.bodyBase64), (char) => char.charCodeAt(0));
+    }
+    return new TextEncoder().encode(typeof data.body === "string" ? data.body : "");
+  }
+
   async writeFile(input: {
     path: string;
     body: string;
@@ -75,6 +79,38 @@ export class AppKitsBridge {
     return parseWriteFileResult(data, input.path, input.contentType);
   }
 
+  async writeFileBytes(
+    path: string,
+    content: Uint8Array,
+    contentType: string,
+  ): Promise<AppKitsWriteFileResult> {
+    let binary = "";
+    for (const byte of content) binary += String.fromCharCode(byte);
+    const data = await this.client.files.write({
+      path,
+      bodyBase64: btoa(binary),
+      contentType,
+    });
+    return parseWriteFileResult(data, path, contentType);
+  }
+
+  async listFiles(path = "/home/agent"): Promise<AppKitsFileEntry[]> {
+    const data = await this.client.files.list(path);
+    return data.entries.map(normalizeFileEntry);
+  }
+
+  async mkdir(path: string): Promise<void> {
+    await this.client.files.mkdir(path);
+  }
+
+  async deletePath(path: string): Promise<void> {
+    await this.client.files.delete(path);
+  }
+
+  async renamePath(path: string, toPath: string): Promise<void> {
+    await this.client.files.move(path, toPath);
+  }
+
   launchParams(): Promise<AppKitsLaunchParams> {
     return this.client.launch.params() as Promise<AppKitsLaunchParams>;
   }
@@ -84,6 +120,22 @@ export class AppKitsBridge {
       handler as (params: Record<string, unknown>) => void,
     );
   }
+}
+
+function normalizeFileEntry(entry: SdkFileEntry): AppKitsFileEntry {
+  return {
+    path: entry.path,
+    name: entry.name,
+    kind: entry.kind,
+    contentType: entry.contentType,
+    size: entry.size,
+    updatedAt:
+      "updatedAt" in entry && typeof entry.updatedAt === "string"
+        ? entry.updatedAt
+        : undefined,
+    local: entry.local,
+    temporary: entry.temporary,
+  };
 }
 
 function parseReadFileResult(value: unknown): AppKitsReadFileResult {

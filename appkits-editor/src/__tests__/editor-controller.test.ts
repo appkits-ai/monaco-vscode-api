@@ -8,19 +8,23 @@ import type {
 function elements() {
   document.body.innerHTML = `
     <div id="host"></div>
-    <div id="empty"></div>
+    <div id="tree"></div>
     <div id="name"></div>
     <div id="path"></div>
+    <div id="workspace"></div>
     <div id="status"></div>
+    <button id="refresh"></button>
     <button id="save"></button>
   `;
   return {
     host: document.getElementById("host")!,
-    emptyState: document.getElementById("empty")!,
+    tree: document.getElementById("tree")!,
     fileName: document.getElementById("name")!,
     filePath: document.getElementById("path")!,
+    workspacePath: document.getElementById("workspace")!,
     status: document.getElementById("status")!,
     saveButton: document.getElementById("save") as HTMLButtonElement,
+    refreshButton: document.getElementById("refresh") as HTMLButtonElement,
   };
 }
 
@@ -71,10 +75,88 @@ const scopedFile = {
 } as const;
 
 describe("EditorController", () => {
+  it("loads /home/agent on direct launch without waiting state text", async () => {
+    const bridge = {
+      postWindowTitle: vi.fn(),
+      listFiles: vi.fn(async () => [
+        { path: "/home/agent/readme.md", name: "readme.md", kind: "file" as const },
+      ]),
+      launchParams: vi.fn(async () => ({})),
+      onLaunchParams: vi.fn(() => () => {}),
+      readFile: vi.fn(),
+      writeFile: vi.fn(),
+      readFileBytes: vi.fn(),
+      writeFileBytes: vi.fn(),
+      mkdir: vi.fn(),
+      deletePath: vi.fn(),
+      renamePath: vi.fn(),
+    };
+    const controller = new EditorController({
+      bridge,
+      elements: elements(),
+      createSession: async (_host, input) => fakeSession(input),
+    });
+
+    await controller.initialize();
+    expect(bridge.listFiles).toHaveBeenCalledWith("/home/agent");
+    expect(document.getElementById("name")?.textContent).toBe("/home/agent");
+    expect(document.body.textContent).not.toContain("Waiting for file");
+    expect(document.getElementById("tree")?.textContent).toContain("readme.md");
+  });
+
+  it("opens appkitsOpenFile after workspace launch params load", async () => {
+    const sessions: ReturnType<typeof fakeSession>[] = [];
+    const bridge = {
+      postWindowTitle: vi.fn(),
+      listFiles: vi.fn(async () => [
+        { path: scopedFile.path, name: scopedFile.name, kind: "file" as const, contentType: scopedFile.contentType },
+      ]),
+      launchParams: vi.fn(async () => ({ appkitsOpenFile: scopedFile })),
+      onLaunchParams: vi.fn(() => () => {}),
+      readFile: vi.fn(async () => ({
+        path: scopedFile.path,
+        body: "let value = 1;\n",
+        contentType: scopedFile.contentType,
+        local: true,
+      })),
+      writeFile: vi.fn(),
+      readFileBytes: vi.fn(),
+      writeFileBytes: vi.fn(),
+      mkdir: vi.fn(),
+      deletePath: vi.fn(),
+      renamePath: vi.fn(),
+    };
+    const controller = new EditorController({
+      bridge,
+      elements: elements(),
+      createSession: async (_host, input) => {
+        const session = fakeSession(input);
+        sessions.push(session);
+        return session;
+      },
+    });
+
+    await controller.initialize();
+    expect(bridge.readFile).toHaveBeenCalledWith(scopedFile.path);
+    expect(document.getElementById("name")?.textContent).toBe("app.ts");
+    expect(sessions).toHaveLength(1);
+  });
+
   it("tracks dirty state and saves through the scoped bridge", async () => {
     const sessions: ReturnType<typeof fakeSession>[] = [];
     const bridge = {
       postWindowTitle: vi.fn(),
+      listFiles: vi.fn(async () => [
+        { path: "/home/agent/workspace", name: "workspace", kind: "directory" as const },
+        { path: scopedFile.path, name: scopedFile.name, kind: "file" as const, contentType: scopedFile.contentType },
+      ]),
+      launchParams: vi.fn(async () => ({})),
+      onLaunchParams: vi.fn(() => () => {}),
+      readFileBytes: vi.fn(),
+      writeFileBytes: vi.fn(),
+      mkdir: vi.fn(),
+      deletePath: vi.fn(),
+      renamePath: vi.fn(),
       readFile: vi.fn(async () => ({
         path: scopedFile.path,
         body: "let value = 1;\n",
@@ -121,6 +203,17 @@ describe("EditorController", () => {
     const sessions: ReturnType<typeof fakeSession>[] = [];
     const bridge = {
       postWindowTitle: vi.fn(),
+      listFiles: vi.fn(async () => [
+        { path: "/home/agent/workspace", name: "workspace", kind: "directory" as const },
+        { path: scopedFile.path, name: scopedFile.name, kind: "file" as const, contentType: scopedFile.contentType },
+      ]),
+      launchParams: vi.fn(async () => ({})),
+      onLaunchParams: vi.fn(() => () => {}),
+      readFileBytes: vi.fn(),
+      writeFileBytes: vi.fn(),
+      mkdir: vi.fn(),
+      deletePath: vi.fn(),
+      renamePath: vi.fn(),
       readFile: vi.fn(async () => ({
         path: scopedFile.path,
         body: "let value = 1;\n",
@@ -154,6 +247,17 @@ describe("EditorController", () => {
     const sessions: ReturnType<typeof fakeSession>[] = [];
     const bridge = {
       postWindowTitle: vi.fn(),
+      listFiles: vi.fn(async () => [
+        { path: "/home/agent/workspace", name: "workspace", kind: "directory" as const },
+        { path: scopedFile.path, name: scopedFile.name, kind: "file" as const, contentType: scopedFile.contentType },
+      ]),
+      launchParams: vi.fn(async () => ({})),
+      onLaunchParams: vi.fn(() => () => {}),
+      readFileBytes: vi.fn(),
+      writeFileBytes: vi.fn(),
+      mkdir: vi.fn(),
+      deletePath: vi.fn(),
+      renamePath: vi.fn(),
       readFile: vi.fn(async () => ({
         path: scopedFile.path,
         body: "content",
