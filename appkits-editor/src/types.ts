@@ -1,6 +1,3 @@
-export const APPKITS_LAUNCH_PARAMS = "APPKITS_LAUNCH_PARAMS";
-export const APPKITS_OPEN_FILE = "APPKITS_OPEN_FILE";
-
 export type AppKitsFileRole = "viewer" | "editor" | "exporter" | string;
 
 export interface AppKitsOpenFile {
@@ -32,7 +29,6 @@ export interface AppKitsWriteFileResult {
   contentType: string;
   local: boolean;
 }
-
 
 export interface AppKitsWorkspaceEntry {
   path: string;

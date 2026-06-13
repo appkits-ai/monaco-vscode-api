@@ -50,7 +50,7 @@ import {
   AppKitsFileSystemProvider,
 } from "./appkits-file-system-provider";
 import { APPKITS_WORKSPACE_FILE, normalizeAppKitsPath } from "./appkits-paths";
-import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
+import { openFileFromLaunchParams } from "./launch-params";
 import type { AppKitsOpenFile } from "./types";
 
 export async function startAppKitsWorkbench(container: HTMLElement): Promise<void> {
@@ -84,11 +84,6 @@ export async function startAppKitsWorkbench(container: HTMLElement): Promise<voi
     },
     ExtensionHostKind.LocalProcess,
   ).setAsDefaultApi();
-
-  window.addEventListener("message", (event) => {
-    const file = openFileFromHostMessage(event.data);
-    if (file) void openAppKitsFile(file);
-  });
 
   const launchParams = await appkits.Launch.params().catch(() => ({}));
   const launchFile = openFileFromLaunchParams(launchParams);

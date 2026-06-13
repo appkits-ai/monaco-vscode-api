@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openFileFromHostMessage, openFileFromLaunchParams } from "../launch-params";
+import { openFileFromLaunchParams } from "../launch-params";
 
 const openFile = {
   version: 1,
@@ -33,19 +33,13 @@ describe("launch params", () => {
     });
   });
 
-  it("reads host launch and open-file messages", () => {
+  it("ignores direct host messages in favor of SDK launch params", () => {
     expect(
-      openFileFromHostMessage({
-        type: "APPKITS_LAUNCH_PARAMS",
+      openFileFromLaunchParams({
+        type: "DIRECT_HOST_LAUNCH_PARAMS",
         params: { appkitsOpenFile: openFile },
       }),
-    ).toEqual(openFile);
-    expect(
-      openFileFromHostMessage({
-        type: "APPKITS_OPEN_FILE",
-        file: openFile,
-      }),
-    ).toEqual(openFile);
+    ).toBeNull();
   });
 
   it("rejects folder launch params", () => {
