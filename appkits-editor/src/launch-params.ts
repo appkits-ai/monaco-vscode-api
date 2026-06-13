@@ -1,5 +1,4 @@
 import type { AppKitsOpenFile } from "./types";
-import { APPKITS_LAUNCH_PARAMS, APPKITS_OPEN_FILE } from "./types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object");
@@ -35,17 +34,4 @@ export function openFileFromLaunchParams(
 ): AppKitsOpenFile | null {
   if (!isRecord(params)) return null;
   return normalizeOpenFile(params.appkitsOpenFile);
-}
-
-export function openFileFromHostMessage(
-  message: unknown,
-): AppKitsOpenFile | null {
-  if (!isRecord(message)) return null;
-  if (message.type === APPKITS_OPEN_FILE) {
-    return normalizeOpenFile(message.file);
-  }
-  if (message.type === APPKITS_LAUNCH_PARAMS) {
-    return openFileFromLaunchParams(message.params);
-  }
-  return null;
 }
