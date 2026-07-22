@@ -65,9 +65,18 @@ describe("AppKitsFileSystemProvider", () => {
     await expect(provider.readdir(uri("/home"))).resolves.toEqual([
       ["agent", FileType.Directory],
     ]);
-    expect(decodeUtf8(await provider.readFile(uri(APPKITS_WORKSPACE_FILE)))).toContain(
-      APPKITS_WORKSPACE_ROOT,
-    );
+    expect(
+      JSON.parse(
+        decodeUtf8(await provider.readFile(uri(APPKITS_WORKSPACE_FILE))),
+      ),
+    ).toEqual({
+      folders: [
+        {
+          name: APPKITS_WORKSPACE_ROOT,
+          path: APPKITS_WORKSPACE_ROOT,
+        },
+      ],
+    });
   });
 
   it("lists, reads, and writes through the AppKits SDK filesystem", async () => {
