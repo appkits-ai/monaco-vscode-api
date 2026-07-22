@@ -281,7 +281,18 @@ function fileEntry(path: string, size: number): CachedEntry {
 
 function workspaceFileBytes(): Uint8Array {
   return textEncoder.encode(
-    JSON.stringify({ folders: [{ path: APPKITS_WORKSPACE_ROOT }] }, null, 2),
+    JSON.stringify(
+      {
+        folders: [
+          {
+            name: APPKITS_WORKSPACE_ROOT,
+            path: APPKITS_WORKSPACE_ROOT,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
   );
 }
 
