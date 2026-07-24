@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   APPKITS_WORKSPACE_FILE,
+  APPKITS_WORKSPACE_PRESENTATION_ROOT,
   APPKITS_WORKSPACE_ROOT,
   AppKitsFileSystemProvider,
   decodeUtf8,
@@ -56,15 +57,18 @@ describe("AppKitsFileSystemProvider", () => {
     vi.clearAllMocks();
   });
 
-  it("exposes /home/agent as a VS Code workspace folder", async () => {
+  it("exposes virtual /home with only the authoritative agent child", async () => {
     const provider = new AppKitsFileSystemProvider();
 
+    await expect(provider.stat(uri(APPKITS_WORKSPACE_PRESENTATION_ROOT))).resolves.toMatchObject({
+      type: FileType.Directory,
+    });
     await expect(provider.readdir(uri("/"))).resolves.toEqual([
       ["home", FileType.Directory],
     ]);
-    await expect(provider.readdir(uri("/home"))).resolves.toEqual([
-      ["agent", FileType.Directory],
-    ]);
+    await expect(
+      provider.readdir(uri(APPKITS_WORKSPACE_PRESENTATION_ROOT)),
+    ).resolves.toEqual([["agent", FileType.Directory]]);
     expect(
       JSON.parse(
         decodeUtf8(await provider.readFile(uri(APPKITS_WORKSPACE_FILE))),
@@ -72,14 +76,54 @@ describe("AppKitsFileSystemProvider", () => {
     ).toEqual({
       folders: [
         {
-          name: APPKITS_WORKSPACE_ROOT,
-          path: APPKITS_WORKSPACE_ROOT,
+          name: "home",
+          path: APPKITS_WORKSPACE_PRESENTATION_ROOT,
         },
       ],
     });
+    expect(sdk.FileSystem.list).not.toHaveBeenCalled();
+    expect(sdk.FileSystem.read).not.toHaveBeenCalled();
   });
 
-  it("lists, reads, and writes through the AppKits SDK filesystem", async () => {
+  it("never sends virtual presentation paths to the AppKits SDK", async () => {
+    const provider = new AppKitsFileSystemProvider();
+    const presentationRoot = uri(APPKITS_WORKSPACE_PRESENTATION_ROOT);
+
+    await expect(provider.readFile(presentationRoot)).rejects.toMatchObject({
+      code: "NoPermissions",
+    });
+    await expect(
+      provider.writeFile(presentationRoot, new Uint8Array(), {
+        create: false,
+        overwrite: true,
+        atomic: false,
+        unlock: false,
+      }),
+    ).rejects.toMatchObject({ code: "NoPermissions" });
+    await expect(provider.mkdir(presentationRoot)).rejects.toMatchObject({
+      code: "NoPermissions",
+    });
+    await expect(
+      provider.delete(presentationRoot, {
+        recursive: true,
+        useTrash: false,
+        atomic: false,
+      }),
+    ).rejects.toMatchObject({ code: "NoPermissions" });
+    await expect(
+      provider.rename(presentationRoot, uri(APPKITS_WORKSPACE_ROOT), {
+        overwrite: false,
+      }),
+    ).rejects.toMatchObject({ code: "NoPermissions" });
+
+    expect(sdk.FileSystem.read).not.toHaveBeenCalled();
+    expect(sdk.FileSystem.write).not.toHaveBeenCalled();
+    expect(sdk.FileSystem.mkdir).not.toHaveBeenCalled();
+    expect(sdk.FileSystem.delete).not.toHaveBeenCalled();
+    expect(sdk.FileSystem.move).not.toHaveBeenCalled();
+  });
+
+  it("keeps canonical file operations under /home/agent", async () => {
     sdk.FileSystem.list.mockResolvedValueOnce({
       entries: [
         { path: "/home/agent/workspace", name: "workspace", kind: "directory" },
@@ -113,6 +157,28 @@ describe("AppKitsFileSystemProvider", () => {
       bodyBase64: btoa("let value = 2;\n"),
       contentType: "text/typescript",
     });
+
+    await provider.mkdir(uri("/home/agent/new-folder"));
+    await provider.rename(
+      uri("/home/agent/app.ts"),
+      uri("/home/agent/new-folder/app.ts"),
+      { overwrite: false },
+    );
+    await provider.delete(uri("/home/agent/new-folder/app.ts"), {
+      recursive: false,
+      useTrash: false,
+      atomic: false,
+    });
+    expect(sdk.FileSystem.mkdir).toHaveBeenCalledWith(
+      "/home/agent/new-folder",
+    );
+    expect(sdk.FileSystem.move).toHaveBeenCalledWith(
+      "/home/agent/app.ts",
+      "/home/agent/new-folder/app.ts",
+    );
+    expect(sdk.FileSystem.delete).toHaveBeenCalledWith(
+      "/home/agent/new-folder/app.ts",
+    );
   });
 
   it("stats hidden launch targets even when their parents are absent from cached listings", async () => {
