@@ -1,3 +1,4 @@
+export const APPKITS_WORKSPACE_PRESENTATION_ROOT = "/home";
 export const APPKITS_WORKSPACE_ROOT = "/home/agent";
 export const APPKITS_WORKSPACE_FILE = "/appkits.code-workspace";
 

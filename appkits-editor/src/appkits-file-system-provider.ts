@@ -15,11 +15,16 @@ import {
 } from "@codingame/monaco-vscode-files-service-override";
 import {
   APPKITS_WORKSPACE_FILE,
+  APPKITS_WORKSPACE_PRESENTATION_ROOT,
   APPKITS_WORKSPACE_ROOT,
   normalizeAppKitsPath,
 } from "./appkits-paths";
 
-export { APPKITS_WORKSPACE_FILE, APPKITS_WORKSPACE_ROOT };
+export {
+  APPKITS_WORKSPACE_FILE,
+  APPKITS_WORKSPACE_PRESENTATION_ROOT,
+  APPKITS_WORKSPACE_ROOT,
+};
 
 export interface AppKitsFileEntry {
   path: string;
@@ -90,7 +95,11 @@ export class AppKitsFileSystemProvider
     if (path === APPKITS_WORKSPACE_FILE) {
       return statForEntry(this.workspaceFileEntry());
     }
-    if (path === "/" || path === APPKITS_WORKSPACE_ROOT) {
+    if (
+      path === "/" ||
+      path === APPKITS_WORKSPACE_PRESENTATION_ROOT ||
+      path === APPKITS_WORKSPACE_ROOT
+    ) {
       return statForEntry(directoryEntry(path));
     }
     const parent = dirname(path);
@@ -103,7 +112,9 @@ export class AppKitsFileSystemProvider
   async readdir(resource: ResourceUri): Promise<[string, FileType][]> {
     const path = normalizePath(resource.path);
     if (path === "/") return [["home", FileType.Directory]];
-    if (path === "/home") return [["agent", FileType.Directory]];
+    if (path === APPKITS_WORKSPACE_PRESENTATION_ROOT) {
+      return [["agent", FileType.Directory]];
+    }
     if (path === APPKITS_WORKSPACE_FILE) {
       throw providerError("File is not a directory", FileSystemProviderErrorCode.FileNotADirectory);
     }
@@ -114,8 +125,9 @@ export class AppKitsFileSystemProvider
   async readFile(resource: ResourceUri): Promise<Uint8Array> {
     const path = normalizePath(resource.path);
     if (path === APPKITS_WORKSPACE_FILE) return workspaceFileBytes();
+    const sdkPath = requireSdkAuthorityPath(path);
     try {
-      const file = await appkits.FileSystem.read(path);
+      const file = await appkits.FileSystem.read(sdkPath);
       if (typeof file.bodyBase64 === "string") return base64ToBytes(file.bodyBase64);
       return textEncoder.encode(typeof file.body === "string" ? file.body : "");
     } catch (error) {
@@ -132,6 +144,7 @@ export class AppKitsFileSystemProvider
     if (path === APPKITS_WORKSPACE_FILE) {
       throw providerError("Workspace file is read-only", FileSystemProviderErrorCode.NoPermissions);
     }
+    const sdkPath = requireSdkAuthorityPath(path);
     if (!opts.overwrite) {
       try {
         await this.stat(resource);
@@ -141,9 +154,9 @@ export class AppKitsFileSystemProvider
       }
     }
     await appkits.FileSystem.write({
-      path,
+      path: sdkPath,
       bodyBase64: bytesToBase64(content),
-      contentType: contentTypeForPath(path),
+      contentType: contentTypeForPath(sdkPath),
     });
     this.invalidate(dirname(path));
     this.fileStatCache.set(path, fileEntry(path, content.length));
@@ -151,14 +164,14 @@ export class AppKitsFileSystemProvider
   }
 
   async mkdir(resource: ResourceUri): Promise<void> {
-    const path = normalizePath(resource.path);
+    const path = requireSdkAuthorityPath(normalizePath(resource.path));
     await appkits.FileSystem.mkdir(path);
     this.invalidate(dirname(path));
     this.fire(path, FileChangeType.ADDED);
   }
 
   async delete(resource: ResourceUri, _opts: IFileDeleteOptions): Promise<void> {
-    const path = normalizePath(resource.path);
+    const path = requireSdkAuthorityPath(normalizePath(resource.path));
     await appkits.FileSystem.delete(path);
     this.invalidate(dirname(path));
     this.fileStatCache.delete(path);
@@ -170,8 +183,8 @@ export class AppKitsFileSystemProvider
     to: ResourceUri,
     _opts: IFileOverwriteOptions,
   ): Promise<void> {
-    const fromPath = normalizePath(from.path);
-    const toPath = normalizePath(to.path);
+    const fromPath = requireSdkAuthorityPath(normalizePath(from.path));
+    const toPath = requireSdkAuthorityPath(normalizePath(to.path));
     await appkits.FileSystem.move(fromPath, toPath);
     this.invalidate(dirname(fromPath));
     this.invalidate(dirname(toPath));
@@ -182,7 +195,7 @@ export class AppKitsFileSystemProvider
 
   private async list(path: string): Promise<CachedEntry[]> {
     const normalized = normalizePath(path);
-    if (!normalized.startsWith(APPKITS_WORKSPACE_ROOT)) return [];
+    if (!isSdkAuthorityPath(normalized)) return [];
     const cached = this.directoryCache.get(normalized);
     if (cached) return cached;
     const result = await appkits.FileSystem.list(normalized);
@@ -211,12 +224,13 @@ export class AppKitsFileSystemProvider
   }
 
   private async statBySdk(path: string): Promise<IStat> {
+    const sdkPath = requireSdkAuthorityPath(path);
     try {
-      return await this.statFileByRead(path);
+      return await this.statFileByRead(sdkPath);
     } catch (fileError) {
       try {
-        const entries = await this.list(path);
-        if (entries.length > 0) return statForEntry(directoryEntry(path));
+        const entries = await this.list(sdkPath);
+        if (entries.length > 0) return statForEntry(directoryEntry(sdkPath));
       } catch {
         // Fall through to the original file read failure.
       }
@@ -285,8 +299,8 @@ function workspaceFileBytes(): Uint8Array {
       {
         folders: [
           {
-            name: APPKITS_WORKSPACE_ROOT,
-            path: APPKITS_WORKSPACE_ROOT,
+            name: basename(APPKITS_WORKSPACE_PRESENTATION_ROOT),
+            path: APPKITS_WORKSPACE_PRESENTATION_ROOT,
           },
         ],
       },
@@ -298,8 +312,25 @@ function workspaceFileBytes(): Uint8Array {
 
 function normalizePath(path: string): string {
   const normalized = path.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
-  if (normalized === "/" || normalized === "/home") return normalized;
+  if (normalized === "/" || normalized === APPKITS_WORKSPACE_PRESENTATION_ROOT) {
+    return normalized;
+  }
   return normalizeAppKitsPath(path);
+}
+
+function isSdkAuthorityPath(path: string): boolean {
+  return (
+    path === APPKITS_WORKSPACE_ROOT ||
+    path.startsWith(`${APPKITS_WORKSPACE_ROOT}/`)
+  );
+}
+
+function requireSdkAuthorityPath(path: string): string {
+  if (isSdkAuthorityPath(path)) return path;
+  throw providerError(
+    "Virtual workspace paths are not AppKits SDK authorities",
+    FileSystemProviderErrorCode.NoPermissions,
+  );
 }
 
 function dirname(path: string): string {
