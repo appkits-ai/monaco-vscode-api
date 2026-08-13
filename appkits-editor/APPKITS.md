@@ -1,6 +1,6 @@
 # AppKits VS Code Editor Plugin
 
-This fork adds `appkits-editor/`, a static browser plugin for AppKits. It runs the `@codingame/monaco-vscode-api` workbench package family `33.0.9` and connects the VS Code file service to the AppKits Core SDK filesystem.
+Agent entry for this plugin is `AGENTS.md`. This fork adds `appkits-editor/`, a static browser plugin for AppKits. It runs the `@codingame/monaco-vscode-api` workbench package family `33.0.9` and connects the VS Code file service to the AppKits Core SDK filesystem.
 
 ## Scope
 
