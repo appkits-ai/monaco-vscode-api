@@ -1,3 +1,7 @@
+/**
+ * 编辑器全屏 workbench 与 isolate Bash Terminal 覆盖层样式。
+ * Full-viewport workbench styles and the isolate Bash Terminal overlay.
+ */
 html,
 body,
 #workbench {
@@ -23,4 +27,14 @@ body[data-failed="true"] #workbench {
   color: #f2f2f2;
   font: 13px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-align: center;
+}
+
+#appkits-bash-terminal-overlay {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  background: #1e1e1e;
 }
