@@ -1,3 +1,10 @@
+/**
+ * 把 VS Code 文件操作接到 /home/agent，并补齐缺失的可选 .vscode JSON。
+ * Bridges VS Code file operations to /home/agent and fills missing optional .vscode JSON.
+ *
+ * @owner appkits-editor
+ * @module vscode-editor
+ */
 import * as appkits from "@appkits-ai/sdk/client";
 import {
   FileChangeType,
@@ -16,6 +23,14 @@ import {
 
 export const APPKITS_WORKSPACE_ROOT = "/home/agent";
 export const APPKITS_WORKSPACE_FILE = "/appkits.code-workspace";
+export const APPKITS_VSCODE_DIR = `${APPKITS_WORKSPACE_ROOT}/.vscode`;
+export const APPKITS_VSCODE_OPTIONAL_FILES = [
+  "settings.json",
+  "tasks.json",
+  "launch.json",
+  "extensions.json",
+  "mcp.json",
+] as const;
 
 export interface AppKitsFileEntry {
   path: string;
@@ -92,8 +107,10 @@ export class AppKitsFileSystemProvider
     const parent = dirname(path);
     const entries = await this.list(parent);
     const entry = entries.find((item) => item.path === path);
-    if (!entry) throw providerError("File not found", FileSystemProviderErrorCode.FileNotFound);
-    return statForEntry(entry);
+    if (entry) return statForEntry(entry);
+    const optional = optionalVscodeEntry(path);
+    if (optional) return statForEntry(optional);
+    throw providerError("File not found", FileSystemProviderErrorCode.FileNotFound);
   }
 
   async readdir(resource: ResourceUri): Promise<[string, FileType][]> {
@@ -115,6 +132,7 @@ export class AppKitsFileSystemProvider
       if (typeof file.bodyBase64 === "string") return base64ToBytes(file.bodyBase64);
       return textEncoder.encode(typeof file.body === "string" ? file.body : "");
     } catch (error) {
+      if (optionalVscodeFileName(path)) return emptyJsonBytes();
       throw providerError(errorMessage(error), FileSystemProviderErrorCode.FileNotFound);
     }
   }
@@ -181,10 +199,16 @@ export class AppKitsFileSystemProvider
     if (!normalized.startsWith(APPKITS_WORKSPACE_ROOT)) return [];
     const cached = this.directoryCache.get(normalized);
     if (cached) return cached;
-    const result = await appkits.FileSystem.list(normalized);
-    const entries = (Array.isArray(result.entries) ? result.entries : [])
-      .map((entry) => normalizeEntry(entry))
-      .filter((entry): entry is CachedEntry => Boolean(entry));
+    let entries: CachedEntry[] = [];
+    try {
+      const result = await appkits.FileSystem.list(normalized);
+      entries = (Array.isArray(result.entries) ? result.entries : [])
+        .map((entry) => normalizeEntry(entry))
+        .filter((entry): entry is CachedEntry => Boolean(entry));
+    } catch (error) {
+      if (normalized !== APPKITS_VSCODE_DIR) throw error;
+    }
+    mergeOptionalVscodeEntries(normalized, entries);
     this.directoryCache.set(normalized, entries);
     for (const entry of entries) this.fileStatCache.set(entry.path, entry);
     return entries;
@@ -253,8 +277,55 @@ function workspaceFileBytes(): Uint8Array {
 }
 
 function normalizePath(path: string): string {
-  const prefixed = path.startsWith("/") ? path : `/${path}`;
+  const unified = path.replace(/\\/g, "/");
+  const prefixed = unified.startsWith("/") ? unified : `/${unified}`;
   return prefixed.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
+}
+
+/** 返回空 JSON 文档字节。 Returns empty JSON document bytes. */
+function emptyJsonBytes(): Uint8Array {
+  return textEncoder.encode("{}\n");
+}
+
+/**
+ * 若路径是可选的 VS Code 配置文件则返回文件名。
+ * Returns the filename when the path is an optional VS Code config file.
+ */
+function optionalVscodeFileName(path: string): string | undefined {
+  if (!path.startsWith(`${APPKITS_VSCODE_DIR}/`)) return undefined;
+  const name = path.slice(APPKITS_VSCODE_DIR.length + 1);
+  return APPKITS_VSCODE_OPTIONAL_FILES.find((file) => file === name);
+}
+
+/**
+ * 为缺失的 .vscode 目录或可选 JSON 构造虚拟条目。
+ * Builds a virtual entry for a missing .vscode directory or optional JSON file.
+ */
+function optionalVscodeEntry(path: string): CachedEntry | null {
+  if (path === APPKITS_VSCODE_DIR) return directoryEntry(path);
+  const name = optionalVscodeFileName(path);
+  if (!name) return null;
+  return fileEntry(path, emptyJsonBytes().byteLength);
+}
+
+/**
+ * 在 Computer 未给出 .vscode 时补上目录和可选 JSON。
+ * Adds the .vscode directory and optional JSON when Computer does not list them.
+ */
+function mergeOptionalVscodeEntries(path: string, entries: CachedEntry[]): void {
+  if (path === APPKITS_WORKSPACE_ROOT) {
+    if (!entries.some((entry) => entry.path === APPKITS_VSCODE_DIR)) {
+      entries.push(directoryEntry(APPKITS_VSCODE_DIR));
+    }
+    return;
+  }
+  if (path !== APPKITS_VSCODE_DIR) return;
+  for (const name of APPKITS_VSCODE_OPTIONAL_FILES) {
+    const filePath = `${APPKITS_VSCODE_DIR}/${name}`;
+    if (!entries.some((entry) => entry.path === filePath)) {
+      entries.push(fileEntry(filePath, emptyJsonBytes().byteLength));
+    }
+  }
 }
 
 function dirname(path: string): string {

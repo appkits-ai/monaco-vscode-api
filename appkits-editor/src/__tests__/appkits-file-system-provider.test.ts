@@ -54,6 +54,12 @@ vi.mock("@appkits-ai/sdk/client", () => sdk);
 describe("AppKitsFileSystemProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sdk.FileSystem.list.mockReset();
+    sdk.FileSystem.read.mockReset();
+    sdk.FileSystem.write.mockReset();
+    sdk.FileSystem.delete.mockReset();
+    sdk.FileSystem.mkdir.mockReset();
+    sdk.FileSystem.move.mockReset();
   });
 
   it("exposes /home/agent as a VS Code workspace folder", async () => {
@@ -88,6 +94,7 @@ describe("AppKitsFileSystemProvider", () => {
     await expect(provider.readdir(uri("/home/agent"))).resolves.toEqual([
       ["workspace", FileType.Directory],
       ["app.ts", FileType.File],
+      [".vscode", FileType.Directory],
     ]);
     expect(sdk.FileSystem.list).toHaveBeenCalledWith("/home/agent");
 
@@ -104,6 +111,26 @@ describe("AppKitsFileSystemProvider", () => {
       bodyBase64: btoa("let value = 2;\n"),
       contentType: "text/typescript",
     });
+  });
+
+  it("exposes empty optional .vscode JSON when Computer has no folder", async () => {
+    sdk.FileSystem.list.mockImplementation(async (path: string) => {
+      if (path === "/home/agent") return { entries: [] };
+      throw new Error("not found: /home/agent/.vscode");
+    });
+    sdk.FileSystem.read.mockRejectedValue(new Error("not found: /home/agent/.vscode"));
+
+    const provider = new AppKitsFileSystemProvider();
+    await expect(provider.readdir(uri("/home/agent"))).resolves.toEqual([
+      [".vscode", FileType.Directory],
+    ]);
+    await expect(provider.stat(uri("\\home\\agent\\.vscode\\settings.json"))).resolves.toMatchObject({
+      type: FileType.File,
+    });
+    expect(decodeUtf8(await provider.readFile(uri("/home/agent/.vscode/settings.json")))).toBe(
+      "{}\n",
+    );
+    expect(sdk.FileSystem.read).toHaveBeenCalledWith("/home/agent/.vscode/settings.json");
   });
 });
 

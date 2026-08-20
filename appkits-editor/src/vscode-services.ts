@@ -1,3 +1,12 @@
+/**
+ * 初始化精简 VS Code 服务覆盖，并复用同一套 Monaco worker。
+ * Initializes the thin VS Code service overrides and reuses the same Monaco workers.
+ *
+ * @owner appkits-editor
+ * @module vscode-editor
+ */
+import { installMonacoEnvironment } from "./monaco-environment";
+
 export type IEditorOverrideServices = Record<string, unknown>;
 
 type InitializeFn = (services: IEditorOverrideServices) => Promise<void>;
@@ -11,17 +20,25 @@ export interface InitializeVscodeEditorServicesOptions {
 
 let servicesPromise: Promise<void> | null = null;
 
+/**
+ * 测试用：清空已初始化的 VS Code 服务单例。
+ * Test helper that clears the initialized VS Code service singleton.
+ */
 export function resetVscodeEditorServicesForTests(): void {
   servicesPromise = null;
 }
 
+/**
+ * 安装 worker 后初始化 VS Code 覆盖服务。
+ * Installs workers, then initializes VS Code override services.
+ */
 export function initializeVscodeEditorServices(
   options: InitializeVscodeEditorServicesOptions = {},
 ): Promise<void> {
   if (!servicesPromise) {
     servicesPromise = (async () => {
       options.installWorkers?.();
-      if (!options.installWorkers) installMonacoWorkers();
+      if (!options.installWorkers) installMonacoEnvironment();
       await (options.installDefaultExtensions ?? loadAppKitsDefaultExtensions)();
       await (options.initialize ?? defaultInitialize)(
         await (options.serviceOverrides ?? buildAppKitsServiceOverrides)(),
@@ -90,25 +107,5 @@ export async function buildAppKitsServiceOverrides(): Promise<IEditorOverrideSer
     ...model.default(),
     ...layout.default(),
     ...quickaccess.default(),
-  };
-}
-
-function installMonacoWorkers(): void {
-  window.MonacoEnvironment = {
-    getWorker(_moduleId, label) {
-      if (label === "TextMateWorker") {
-        return new Worker(
-          new URL(
-            "@codingame/monaco-vscode-textmate-service-override/worker",
-            import.meta.url,
-          ),
-          { type: "module" },
-        );
-      }
-      return new Worker(
-        new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url),
-        { type: "module" },
-      );
-    },
   };
 }

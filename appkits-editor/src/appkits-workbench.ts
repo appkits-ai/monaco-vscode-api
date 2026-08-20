@@ -2,6 +2,7 @@
  * 启动 AppKits VS Code workbench，并把 Explorer、编辑器和 isolate Bash Terminal 接到宿主。
  * Starts the AppKits VS Code workbench and wires Explorer, editors, and isolate Bash Terminal to the host.
  */
+import "./monaco-environment";
 import * as appkits from "@appkits-ai/sdk/client";
 import * as monaco from "monaco-editor";
 import {
@@ -56,6 +57,7 @@ import {
   APPKITS_WORKSPACE_ROOT,
   AppKitsFileSystemProvider,
 } from "./appkits-file-system-provider";
+import { installMonacoEnvironment } from "./monaco-environment";
 import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
 import type { AppKitsOpenFile } from "./types";
 
@@ -64,7 +66,7 @@ import type { AppKitsOpenFile } from "./types";
  * Initializes the workbench, VFS, launch-file open, and isolate Bash Terminal.
  */
 export async function startAppKitsWorkbench(container: HTMLElement): Promise<void> {
-  installWorkers();
+  installMonacoEnvironment();
   await initUserConfiguration(
     JSON.stringify({
       "workbench.colorTheme": "Default Dark Modern",
@@ -191,29 +193,6 @@ async function openAppKitsFile(file: AppKitsOpenFile): Promise<void> {
   const editorService = await getService(IEditorService);
   await editorService.openEditor({ resource: uri, options: { pinned: true } });
   await appkits.Window.setTitle(file.name || basename(file.path)).catch(() => undefined);
-}
-
-function installWorkers(): void {
-  window.MonacoEnvironment = {
-    getWorker(_moduleId, label) {
-      if (label === "TextMateWorker") {
-        return new Worker(
-          new URL("@codingame/monaco-vscode-textmate-service-override/worker", import.meta.url),
-          { type: "module" },
-        );
-      }
-      if (label === "extensionHostWorkerMain") {
-        return new Worker(
-          new URL("@codingame/monaco-vscode-api/workers/extensionHost.worker", import.meta.url),
-          { type: "module" },
-        );
-      }
-      return new Worker(
-        new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url),
-        { type: "module" },
-      );
-    },
-  };
 }
 
 function basename(path: string): string {
