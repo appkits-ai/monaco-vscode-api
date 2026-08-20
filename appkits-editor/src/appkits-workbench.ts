@@ -1,3 +1,7 @@
+/**
+ * 启动 AppKits VS Code workbench，并把 Explorer、编辑器和 isolate Bash Terminal 接到宿主。
+ * Starts the AppKits VS Code workbench and wires Explorer, editors, and isolate Bash Terminal to the host.
+ */
 import * as appkits from "@appkits-ai/sdk/client";
 import * as monaco from "monaco-editor";
 import {
@@ -36,6 +40,8 @@ import getWorkingCopyServiceOverride from "@codingame/monaco-vscode-working-copy
 import getExplorerServiceOverride from "@codingame/monaco-vscode-explorer-service-override";
 import getNotificationServiceOverride from "@codingame/monaco-vscode-notifications-service-override";
 import getDialogsServiceOverride from "@codingame/monaco-vscode-dialogs-service-override";
+import getTerminalServiceOverride from "@codingame/monaco-vscode-terminal-service-override";
+import { AppKitsTerminalBackend } from "./appkits-bash-terminal";
 import "vscode/localExtensionHost";
 import "@codingame/monaco-vscode-theme-defaults-default-extension";
 import "@codingame/monaco-vscode-javascript-default-extension";
@@ -53,6 +59,10 @@ import {
 import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
 import type { AppKitsOpenFile } from "./types";
 
+/**
+ * 初始化 workbench、VFS、启动参数打开，以及 isolate Bash Terminal。
+ * Initializes the workbench, VFS, launch-file open, and isolate Bash Terminal.
+ */
 export async function startAppKitsWorkbench(container: HTMLElement): Promise<void> {
   installWorkers();
   await initUserConfiguration(
@@ -101,6 +111,10 @@ export async function startAppKitsWorkbench(container: HTMLElement): Promise<voi
   appkits.Window.setTitle("VS Code Editor").catch(() => undefined);
 }
 
+/**
+ * 组装 workbench 服务覆盖，包括 isolate Bash Terminal 后端。
+ * Assembles workbench service overrides, including the isolate Bash Terminal backend.
+ */
 function buildServices(): IEditorOverrideServices {
   return {
     ...getBaseServiceOverride(),
@@ -130,9 +144,14 @@ function buildServices(): IEditorOverrideServices {
     ...getLifecycleServiceOverride(),
     ...getWorkingCopyServiceOverride(),
     ...getExplorerServiceOverride(),
+    ...getTerminalServiceOverride(new AppKitsTerminalBackend()),
   };
 }
 
+/**
+ * 配置可信工作区、默认 Explorer 与 Terminal 面板。
+ * Configures the trusted workspace and the default Explorer plus Terminal panels.
+ */
 function constructionOptions(): IWorkbenchConstructionOptions {
   return {
     workspaceProvider: {
@@ -154,7 +173,7 @@ function constructionOptions(): IWorkbenchConstructionOptions {
       "window.title": "${activeEditorShort}${separator}AppKits",
     },
     defaultLayout: {
-      views: [{ id: "workbench.explorer.fileView" }],
+      views: [{ id: "workbench.explorer.fileView" }, { id: "terminal" }],
       force: false,
     },
     productConfiguration: {
@@ -162,7 +181,7 @@ function constructionOptions(): IWorkbenchConstructionOptions {
       nameLong: "AppKits VS Code Editor",
       applicationName: "appkits-vscode-editor",
       dataFolderName: ".appkits-vscode-editor",
-      version: "0.1.8",
+      version: "0.1.9",
     },
   };
 }

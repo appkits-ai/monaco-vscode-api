@@ -13,6 +13,7 @@ const monacoVscodePackages = [
   "@codingame/monaco-vscode-layout-service-override",
   "@codingame/monaco-vscode-model-service-override",
   "@codingame/monaco-vscode-quickaccess-service-override",
+  "@codingame/monaco-vscode-terminal-service-override",
   "@codingame/monaco-vscode-textmate-service-override",
   "@codingame/monaco-vscode-theme-service-override",
   "monaco-editor",

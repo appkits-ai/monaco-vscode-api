@@ -1,6 +1,6 @@
 {
   "name": "@appkits-ai/vscode-editor",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "description": "Static AppKits VS Code workbench plugin built on @codingame/monaco-vscode-api.",
@@ -33,6 +33,7 @@
     "@codingame/monaco-vscode-notifications-service-override": "33.0.9",
     "@codingame/monaco-vscode-quickaccess-service-override": "33.0.9",
     "@codingame/monaco-vscode-storage-service-override": "33.0.9",
+    "@codingame/monaco-vscode-terminal-service-override": "33.0.9",
     "@codingame/monaco-vscode-textmate-service-override": "33.0.9",
     "@codingame/monaco-vscode-theme-defaults-default-extension": "33.0.9",
     "@codingame/monaco-vscode-theme-service-override": "33.0.9",
