@@ -1,7 +1,8 @@
 /**
- * 在 vscode 导入前安装 Monaco worker，只认领已打包的标签，其余交给官方 bundler。
- * Installs Monaco workers before vscode imports and claims only bundled labels
- * so official bundler entries such as the extension-host iframe stay intact.
+ * 在 vscode 导入前安装 Monaco worker：已打包标签走 ESM，未认领标签交给官方 bundler。
+ * Installs Monaco workers before vscode imports. Claimed labels are ESM
+ * modules; unclaimed labels keep official bundler entries such as the
+ * extension-host iframe HTML.
  *
  * @owner appkits-editor
  * @module vscode-editor
@@ -18,6 +19,8 @@ declare global {
     };
   }
 }
+
+const MODULE_WORKER_OPTIONS: WorkerOptions = { type: "module" };
 
 /**
  * 把已认领的 Monaco worker 标签映射到打包入口；未认领的标签返回空。
@@ -57,19 +60,35 @@ export function monacoWorkerModuleUrl(label: string): URL | null {
 }
 
 /**
- * 写入 window.MonacoEnvironment；getWorker / getWorkerUrl 对未认领标签返回 undefined。
- * Writes window.MonacoEnvironment. getWorker and getWorkerUrl return undefined
- * for unclaimed labels so nested factories keep the bundled iframe worker.
+ * 已认领的 ESM worker 必须带 type:module，否则 iframe bootstrap 会走 importScripts。
+ * Claimed ESM workers advertise type:module so the extension-host iframe
+ * uses await import instead of classic importScripts.
+ */
+export function monacoWorkerOptions(label: string): WorkerOptions | undefined {
+  return monacoWorkerKind(label) ? MODULE_WORKER_OPTIONS : undefined;
+}
+
+/**
+ * 写入 window.MonacoEnvironment。未认领标签三项都返回 undefined。
+ * Writes window.MonacoEnvironment. Unclaimed labels return undefined from
+ * getWorker, getWorkerUrl, and getWorkerOptions so the iframe HTML stays
+ * on esmModuleLocationBundler. getWorkerUrl without getWorkerOptions.type
+ * module would make webWorkerExtensionHostIframe.html importScripts the
+ * ESM extension-host worker (LocalWebWorker exit 81).
  */
 export function installMonacoEnvironment(): void {
   window.MonacoEnvironment = {
     getWorker(_moduleId: string, label: string) {
       const url = monacoWorkerModuleUrl(label);
-      if (!url) return undefined;
-      return new Worker(url, { type: "module" });
+      const options = monacoWorkerOptions(label);
+      if (!url || !options) return undefined;
+      return new Worker(url, options);
     },
     getWorkerUrl(_moduleId: string, label: string) {
       return monacoWorkerModuleUrl(label)?.toString();
+    },
+    getWorkerOptions(_moduleId: string, label: string) {
+      return monacoWorkerOptions(label);
     },
   };
 }
