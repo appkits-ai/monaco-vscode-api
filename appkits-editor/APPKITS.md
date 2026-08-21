@@ -9,7 +9,7 @@ Agent entry for this plugin is `AGENTS.md`. This fork adds `appkits-editor/`, a 
 - File access: `/home/agent` workspace through `@appkits-ai/sdk/client` `FileSystem.*`.
 - Launch: `appkitsOpenFile` and host open-file messages open the target file in the workbench editor.
 - Editor scope: upstream VS Code workbench shell with Explorer, tabs, editor groups, status UI, and the AppKits VFS provider.
-- Terminal: the workbench Terminal panel starts the required isolate Bash plugin through host `runtime.ensure({ pluginSlug: "bash" })` and overlays the admitted ttyd document. It does not fake a local shell or speak ttyd's WebSocket.
+- Terminal: opening the workbench Terminal panel starts the required isolate Bash plugin through host `runtime.ensure({ pluginSlug: "bash" })` and overlays the admitted ttyd document. Workbench start does not open Terminal or call `runtime.ensure`. It does not fake a local shell or speak ttyd's WebSocket.
 
 File operations remain scoped to the AppKits Core SDK VFS contract. The isolate Bash home is container-local; Computer/DOFS stays Home/Workspace authority.
 
