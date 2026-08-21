@@ -1,6 +1,7 @@
 /**
- * 启动 AppKits VS Code workbench，并把 Explorer、编辑器和 isolate Bash Terminal 接到宿主。
- * Starts the AppKits VS Code workbench and wires Explorer, editors, and isolate Bash Terminal to the host.
+ * 启动 AppKits VS Code workbench；Explorer 默认打开，isolate Bash 仅在用户打开 Terminal 时启动。
+ * Starts the AppKits VS Code workbench. Explorer is default; isolate Bash
+ * starts only when the user opens the Terminal panel.
  */
 import "./monaco-environment";
 import * as appkits from "@appkits-ai/sdk/client";
@@ -58,12 +59,16 @@ import {
   AppKitsFileSystemProvider,
 } from "./appkits-file-system-provider";
 import { installMonacoEnvironment } from "./monaco-environment";
+import {
+  APPKITS_DEFAULT_WORKBENCH_VIEWS,
+  APPKITS_TERMINAL_STARTUP_CONFIGURATION,
+} from "./appkits-workbench-layout";
 import { openFileFromHostMessage, openFileFromLaunchParams } from "./launch-params";
 import type { AppKitsOpenFile } from "./types";
 
 /**
- * 初始化 workbench、VFS、启动参数打开，以及 isolate Bash Terminal。
- * Initializes the workbench, VFS, launch-file open, and isolate Bash Terminal.
+ * 初始化 workbench、VFS 与启动参数打开；不在启动时打开 Terminal。
+ * Initializes the workbench, VFS, and launch-file open; does not open Terminal on boot.
  */
 export async function startAppKitsWorkbench(container: HTMLElement): Promise<void> {
   installMonacoEnvironment();
@@ -77,6 +82,7 @@ export async function startAppKitsWorkbench(container: HTMLElement): Promise<voi
       "window.commandCenter": false,
       "workbench.activity.showAccounts": false,
       "workbench.activity.showGlobalActions": false,
+      ...APPKITS_TERMINAL_STARTUP_CONFIGURATION,
     }),
   );
   await initUserKeybindings("[]");
@@ -175,7 +181,7 @@ function constructionOptions(): IWorkbenchConstructionOptions {
       "window.title": "${activeEditorShort}${separator}AppKits",
     },
     defaultLayout: {
-      views: [{ id: "workbench.explorer.fileView" }, { id: "terminal" }],
+      views: [...APPKITS_DEFAULT_WORKBENCH_VIEWS],
       force: false,
     },
     productConfiguration: {
