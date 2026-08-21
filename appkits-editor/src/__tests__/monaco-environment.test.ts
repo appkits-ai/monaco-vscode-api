@@ -10,16 +10,19 @@ describe("monaco-environment", () => {
     delete window.MonacoEnvironment;
   });
 
-  it("routes extensionHostWorkerMain to the extension host worker", () => {
+  it("routes claimed worker labels and leaves the extension-host iframe unclaimed", () => {
     expect(monacoWorkerKind("extensionHostWorkerMain")).toBe("extensionHost");
     expect(monacoWorkerKind("TextMateWorker")).toBe("textmate");
-    expect(monacoWorkerKind("json")).toBe("editor");
-    expect(monacoWorkerModuleUrl("extensionHostWorkerMain").href).toContain(
+    expect(monacoWorkerKind("editorWorkerService")).toBe("editor");
+    expect(monacoWorkerKind("webWorkerExtensionHostIframe")).toBeNull();
+    expect(monacoWorkerKind("json")).toBeNull();
+    expect(monacoWorkerModuleUrl("extensionHostWorkerMain")?.href).toContain(
       "extensionHost.worker",
     );
+    expect(monacoWorkerModuleUrl("webWorkerExtensionHostIframe")).toBeNull();
   });
 
-  it("installs getWorkerUrl so nested factories can resolve extensionHostWorkerMain", () => {
+  it("installs getWorkerUrl for the extension host and falls through for the iframe", () => {
     installMonacoEnvironment();
     expect(typeof window.MonacoEnvironment?.getWorker).toBe("function");
     expect(typeof window.MonacoEnvironment?.getWorkerUrl).toBe("function");
@@ -28,5 +31,17 @@ describe("monaco-environment", () => {
       "extensionHostWorkerMain",
     );
     expect(url).toContain("extensionHost.worker");
+    expect(
+      window.MonacoEnvironment?.getWorkerUrl?.(
+        "workerMain.js",
+        "webWorkerExtensionHostIframe",
+      ),
+    ).toBeUndefined();
+    expect(
+      window.MonacoEnvironment?.getWorker?.(
+        "workerMain.js",
+        "webWorkerExtensionHostIframe",
+      ),
+    ).toBeUndefined();
   });
 });
