@@ -1,12 +1,14 @@
 /**
- * 在 vscode 导入前安装 Monaco worker：已打包标签走 ESM，未认领标签交给官方 bundler。
- * Installs Monaco workers before vscode imports. Claimed labels are ESM
- * modules; unclaimed labels keep official bundler entries such as the
- * extension-host iframe HTML.
+ * 在 vscode 导入前安装 Monaco worker：已认领标签走 Vite 打包的 ESM 文件。
+ * Installs Monaco workers before vscode imports. Claimed labels use Vite-bundled
+ * ESM worker files so the worker graph stays on a hierarchical URL.
  *
  * @owner appkits-editor
  * @module vscode-editor
  */
+import editorWorkerUrl from "monaco-editor/esm/vs/editor/editor.worker.js?worker&url";
+import extensionHostWorkerUrl from "@codingame/monaco-vscode-api/workers/extensionHost.worker?worker&url";
+import textmateWorkerUrl from "@codingame/monaco-vscode-textmate-service-override/worker?worker&url";
 
 export type MonacoWorkerKind = "textmate" | "extensionHost" | "editor";
 
@@ -35,28 +37,35 @@ export function monacoWorkerKind(label: string): MonacoWorkerKind | null {
 }
 
 /**
- * 解析已认领 worker 标签的模块 URL；未认领时不返回 URL。
- * Resolves the module URL for a claimed worker label and returns null when
- * the official bundler must keep the descriptor.
+ * 判断 URL 是否是可给 Worker / import() 使用的分层地址，而不是 data: 残桩。
+ * Returns whether a worker URL is hierarchical for Worker / import(), not a data: stub.
  */
-export function monacoWorkerModuleUrl(label: string): URL | null {
+export function isBundledWorkerUrl(url: string): boolean {
+  return url.length > 0 && !url.startsWith("data:");
+}
+
+/**
+ * 解析已认领 worker 标签的打包模块 URL；未认领时不返回 URL。
+ * Resolves the bundled module URL for a claimed worker label and returns
+ * null when the official bundler must keep the descriptor.
+ */
+export function monacoWorkerModuleUrl(label: string): string | null {
   const kind = monacoWorkerKind(label);
-  if (kind === "textmate") {
-    return new URL(
-      "@codingame/monaco-vscode-textmate-service-override/worker",
-      import.meta.url,
+  const url =
+    kind === "textmate"
+      ? textmateWorkerUrl
+      : kind === "extensionHost"
+        ? extensionHostWorkerUrl
+        : kind === "editor"
+          ? editorWorkerUrl
+          : null;
+  if (url === null) return null;
+  if (!isBundledWorkerUrl(url)) {
+    throw new Error(
+      `Monaco worker ${label} must be a bundled hierarchical URL, not a data: stub.`,
     );
   }
-  if (kind === "extensionHost") {
-    return new URL(
-      "@codingame/monaco-vscode-api/workers/extensionHost.worker",
-      import.meta.url,
-    );
-  }
-  if (kind === "editor") {
-    return new URL("monaco-editor/esm/vs/editor/editor.worker.js", import.meta.url);
-  }
-  return null;
+  return url;
 }
 
 /**
@@ -85,7 +94,7 @@ export function installMonacoEnvironment(): void {
       return new Worker(url, options);
     },
     getWorkerUrl(_moduleId: string, label: string) {
-      return monacoWorkerModuleUrl(label)?.toString();
+      return monacoWorkerModuleUrl(label) ?? undefined;
     },
     getWorkerOptions(_moduleId: string, label: string) {
       return monacoWorkerOptions(label);

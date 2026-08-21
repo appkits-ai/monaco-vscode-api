@@ -1,5 +1,9 @@
-import { defineConfig } from "vite";
+/**
+ * Vite 配置：把 monaco-vscode CSS 收成字符串，并把 worker 图打成独立 ESM 文件。
+ * Vite config: inline monaco-vscode CSS as strings and emit worker graphs as ESM files.
+ */
 import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
+import { defineConfig, type Plugin } from "vite";
 
 const monacoVscodePackages = [
   "@codingame/monaco-vscode-api",
@@ -20,32 +24,41 @@ const monacoVscodePackages = [
   "vscode",
 ];
 
+/**
+ * 把 monaco-vscode / monaco-editor CSS 收成 `?inline` 字符串，主 bundle 与 worker 共用。
+ * Loads monaco-vscode / monaco-editor CSS as `?inline` strings for the app and worker graphs.
+ */
+function monacoCssAsStringPlugin(): Plugin {
+  return {
+    name: "load-monaco-vscode-css-as-string",
+    enforce: "pre",
+    async resolveId(source, importer, options) {
+      const resolved = await this.resolve(source, importer, options);
+      if (
+        resolved?.id.match(
+          /node_modules\/(@codingame\/monaco-vscode|vscode|monaco-editor).*\.css$/,
+        )
+      ) {
+        return {
+          ...resolved,
+          id: `${resolved.id}?inline`,
+        };
+      }
+      return undefined;
+    },
+  };
+}
+
 export default defineConfig({
   build: {
     target: "esnext",
   },
   worker: {
     format: "es",
+    plugins: () => [monacoCssAsStringPlugin()],
   },
   plugins: [
-    {
-      name: "load-monaco-vscode-css-as-string",
-      enforce: "pre",
-      async resolveId(source, importer, options) {
-        const resolved = await this.resolve(source, importer, options);
-        if (
-          resolved?.id.match(
-            /node_modules\/(@codingame\/monaco-vscode|vscode|monaco-editor).*\.css$/,
-          )
-        ) {
-          return {
-            ...resolved,
-            id: `${resolved.id}?inline`,
-          };
-        }
-        return undefined;
-      },
-    },
+    monacoCssAsStringPlugin(),
     {
       name: "configure-monaco-vscode-dev-headers",
       apply: "serve",

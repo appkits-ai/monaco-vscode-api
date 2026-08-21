@@ -1,3 +1,7 @@
+<!--
+把 AppKits VS Code 插件的范围、开发命令和 worker 打包合同写清楚。
+Records the AppKits VS Code plugin scope, development commands, and worker bundle contract.
+-->
 # AppKits VS Code Editor Plugin
 
 Agent entry for this plugin is `AGENTS.md`. This fork adds `appkits-editor/`, a static browser plugin for AppKits. It runs the `@codingame/monaco-vscode-api` workbench package family `33.0.9` and connects the VS Code file service to the AppKits Core SDK filesystem.
@@ -23,6 +27,8 @@ npm run build
 ```
 
 The build output is written to `appkits-editor/dist`.
+
+Claimed Monaco workers (`extensionHostWorkerMain`, `TextMateWorker`, `editorWorkerService`) must be Vite `?worker&url` ESM chunks. `new URL(packageEntry, import.meta.url)` inlines the unbundled stub as a `data:` URL; the worker then fails to resolve `../vscode/src/vs/workbench/api/worker/extensionHostWorkerMain.js` and LocalWebWorker exits 81. `npm run build` rejects those stubs.
 
 ## Packaging
 

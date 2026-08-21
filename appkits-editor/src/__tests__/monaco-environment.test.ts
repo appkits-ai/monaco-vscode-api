@@ -1,14 +1,41 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   installMonacoEnvironment,
+  isBundledWorkerUrl,
   monacoWorkerKind,
   monacoWorkerModuleUrl,
   monacoWorkerOptions,
 } from "../monaco-environment";
 
+const UNBUNDLED_EXTENSION_HOST_SPECIFIER =
+  "../vscode/src/vs/workbench/api/worker/extensionHostWorkerMain.js";
+
+vi.mock("monaco-editor/esm/vs/editor/editor.worker.js?worker&url", () => ({
+  default: "https://vscode-editor-plugin.w3kits.com/assets/editor.worker.js",
+}));
+vi.mock("@codingame/monaco-vscode-api/workers/extensionHost.worker?worker&url", () => ({
+  default: "https://vscode-editor-plugin.w3kits.com/assets/extensionHost.worker.js",
+}));
+vi.mock("@codingame/monaco-vscode-textmate-service-override/worker?worker&url", () => ({
+  default: "https://vscode-editor-plugin.w3kits.com/assets/textmate.worker.js",
+}));
+
 describe("monaco-environment", () => {
   afterEach(() => {
     delete window.MonacoEnvironment;
+  });
+
+  it("rejects data: stubs that cannot resolve the extension-host specifier", () => {
+    expect(isBundledWorkerUrl("data:text/javascript,import 'x'")).toBe(false);
+    expect(
+      isBundledWorkerUrl(`data:text/javascript,import '${UNBUNDLED_EXTENSION_HOST_SPECIFIER}'`),
+    ).toBe(false);
+    expect(isBundledWorkerUrl("")).toBe(false);
+    expect(
+      isBundledWorkerUrl(
+        "https://vscode-editor-plugin.w3kits.com/assets/extensionHost.worker.js",
+      ),
+    ).toBe(true);
   });
 
   it("routes claimed worker labels and leaves the extension-host iframe unclaimed", () => {
@@ -17,9 +44,11 @@ describe("monaco-environment", () => {
     expect(monacoWorkerKind("editorWorkerService")).toBe("editor");
     expect(monacoWorkerKind("webWorkerExtensionHostIframe")).toBeNull();
     expect(monacoWorkerKind("json")).toBeNull();
-    expect(monacoWorkerModuleUrl("extensionHostWorkerMain")?.href).toContain(
-      "extensionHost.worker",
-    );
+    const extensionHostUrl = monacoWorkerModuleUrl("extensionHostWorkerMain");
+    expect(extensionHostUrl).toBeTruthy();
+    expect(isBundledWorkerUrl(extensionHostUrl ?? "")).toBe(true);
+    expect(extensionHostUrl).not.toMatch(/^data:/);
+    expect(extensionHostUrl).not.toContain(UNBUNDLED_EXTENSION_HOST_SPECIFIER);
     expect(monacoWorkerModuleUrl("webWorkerExtensionHostIframe")).toBeNull();
     expect(monacoWorkerOptions("extensionHostWorkerMain")).toEqual({ type: "module" });
     expect(monacoWorkerOptions("webWorkerExtensionHostIframe")).toBeUndefined();
@@ -38,7 +67,10 @@ describe("monaco-environment", () => {
       "workerMain.js",
       "extensionHostWorkerMain",
     );
-    expect(url).toContain("extensionHost.worker");
+    expect(url).toBeTruthy();
+    expect(isBundledWorkerUrl(url ?? "")).toBe(true);
+    expect(url).not.toMatch(/^data:/);
+    expect(url).not.toContain(UNBUNDLED_EXTENSION_HOST_SPECIFIER);
     expect(options?.type).toBe("module");
     expect(
       window.MonacoEnvironment?.getWorkerUrl?.(

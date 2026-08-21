@@ -6,7 +6,7 @@
   "description": "Static AppKits VS Code workbench plugin built on @codingame/monaco-vscode-api.",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5174",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/assert-bundled-workers.mjs",
     "test": "vitest run"
   },
   "dependencies": {
