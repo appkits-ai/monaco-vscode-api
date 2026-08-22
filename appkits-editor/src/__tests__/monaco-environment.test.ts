@@ -45,12 +45,20 @@ describe("monaco-environment", () => {
     expect(monacoWorkerKind("webWorkerExtensionHostIframe")).toBeNull();
     expect(monacoWorkerKind("json")).toBeNull();
     const extensionHostUrl = monacoWorkerModuleUrl("extensionHostWorkerMain");
+    const editorUrl = monacoWorkerModuleUrl("editorWorkerService");
+    const textmateUrl = monacoWorkerModuleUrl("TextMateWorker");
     expect(extensionHostUrl).toBeTruthy();
     expect(isBundledWorkerUrl(extensionHostUrl ?? "")).toBe(true);
     expect(extensionHostUrl).not.toMatch(/^data:/);
     expect(extensionHostUrl).not.toContain(UNBUNDLED_EXTENSION_HOST_SPECIFIER);
+    expect(editorUrl).toBe("https://vscode-editor-plugin.w3kits.com/assets/editor.worker.js");
+    expect(textmateUrl).toBe("https://vscode-editor-plugin.w3kits.com/assets/textmate.worker.js");
+    expect(isBundledWorkerUrl(editorUrl ?? "")).toBe(true);
+    expect(isBundledWorkerUrl(textmateUrl ?? "")).toBe(true);
     expect(monacoWorkerModuleUrl("webWorkerExtensionHostIframe")).toBeNull();
     expect(monacoWorkerOptions("extensionHostWorkerMain")).toEqual({ type: "module" });
+    expect(monacoWorkerOptions("editorWorkerService")).toEqual({ type: "module" });
+    expect(monacoWorkerOptions("TextMateWorker")).toEqual({ type: "module" });
     expect(monacoWorkerOptions("webWorkerExtensionHostIframe")).toBeUndefined();
   });
 

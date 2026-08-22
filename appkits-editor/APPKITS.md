@@ -28,7 +28,7 @@ npm run build
 
 The build output is written to `appkits-editor/dist`.
 
-Claimed Monaco workers (`extensionHostWorkerMain`, `TextMateWorker`, `editorWorkerService`) must be Vite `?worker&url` ESM chunks. `new URL(packageEntry, import.meta.url)` inlines the unbundled stub as a `data:` URL; the worker then fails to resolve `../vscode/src/vs/workbench/api/worker/extensionHostWorkerMain.js` and LocalWebWorker exits 81. `npm run build` rejects those stubs.
+Claimed Monaco workers (`extensionHostWorkerMain`, `TextMateWorker`, `editorWorkerService`) must be Vite `?worker&url` ESM chunks. `new URL(packageEntry, import.meta.url)` inlines the unbundled stub as a `data:` URL; the worker then fails to resolve `../vscode/src/vs/workbench/api/worker/extensionHostWorkerMain.js` and LocalWebWorker exits 81. `npm run build` rejects `data:text/javascript` in the index and requires hierarchical `extensionHost.worker-*`, `editor.worker-*`, and `worker-*` chunks.
 
 ## Packaging
 
