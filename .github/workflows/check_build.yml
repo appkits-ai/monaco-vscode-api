@@ -7,7 +7,7 @@ on:
 jobs:
   lint-commits:
     name: Lint commits
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -19,7 +19,7 @@ jobs:
       - run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
   check:
     name: Check build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
 
     steps:
       - name: Checkout
